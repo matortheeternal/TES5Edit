@@ -15,6 +15,7 @@
 unit frmViewMain;
 
 {$I wbDefines.inc}
+{$DEFINE LiteVersion}
 
 interface
 

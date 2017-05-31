@@ -3,7 +3,7 @@
 			<ProjectGuid>{12317C9C-736E-45A4-8CB7-E43FF92DD93C}</ProjectGuid>
 			<MainSource>TES5Edit.dpr</MainSource>
 			<Base>True</Base>
-			<Config Condition="'$(Config)'==''">Debug</Config>
+			<Config Condition="'$(Config)'==''">ReleaseLite</Config>
 			<AppType>Application</AppType>
 			<FrameworkType>VCL</FrameworkType>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
@@ -20,6 +20,12 @@
 			<CfgParent>Base</CfgParent>
 			<Base>true</Base>
 		</PropertyGroup>
+		<PropertyGroup Condition="'$(Platform)'=='Win32' and '$(Cfg_1)'=='true' or '$(Cfg_1_Win32)'!=''">
+			<Cfg_1_Win32>true</Cfg_1_Win32>
+			<CfgParent>Cfg_1</CfgParent>
+			<Cfg_1>true</Cfg_1>
+			<Base>true</Base>
+		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_2)'!=''">
 			<Cfg_2>true</Cfg_2>
 			<CfgParent>Base</CfgParent>
@@ -34,6 +40,23 @@
 		<PropertyGroup Condition="'$(Config)'=='DebugLite' or '$(Cfg_4)'!=''">
 			<Cfg_4>true</Cfg_4>
 			<CfgParent>Base</CfgParent>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Platform)'=='Win32' and '$(Cfg_4)'=='true' or '$(Cfg_4_Win32)'!=''">
+			<Cfg_4_Win32>true</Cfg_4_Win32>
+			<CfgParent>Cfg_4</CfgParent>
+			<Cfg_4>true</Cfg_4>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Config)'=='ReleaseLite' or '$(Cfg_5)'!=''">
+			<Cfg_5>true</Cfg_5>
+			<CfgParent>Base</CfgParent>
+			<Base>true</Base>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Platform)'=='Win32' and '$(Cfg_5)'=='true' or '$(Cfg_5_Win32)'!=''">
+			<Cfg_5_Win32>true</Cfg_5_Win32>
+			<CfgParent>Cfg_5</CfgParent>
+			<Cfg_5>true</Cfg_5>
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
@@ -72,6 +95,12 @@
 			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
 			<DCC_DebugInformation>false</DCC_DebugInformation>
 		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
+			<DCC_LocalDebugSymbols>true</DCC_LocalDebugSymbols>
+			<DCC_Define>madExcept;$(DCC_Define)</DCC_Define>
+			<DCC_DebugInformation>true</DCC_DebugInformation>
+			<DCC_MapFile>3</DCC_MapFile>
+		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<DCC_Define>DEBUG;NX_EXCEPTION_LOG_IN_APP_FOLDER;$(DCC_Define)</DCC_Define>
 			<DCC_MapFile>3</DCC_MapFile>
@@ -87,6 +116,17 @@
 			<DCC_MapFile>3</DCC_MapFile>
 			<ILINK_MapFileType>DetailedSegments</ILINK_MapFileType>
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_4_Win32)'!=''">
+			<DCC_Define>madExcept;$(DCC_Define)</DCC_Define>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_5)'!=''">
+			<DCC_Define>LiteVersion;$(DCC_Define)</DCC_Define>
+			<DCC_ExeOutput>.\ReleaseLite</DCC_ExeOutput>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Cfg_5_Win32)'!=''">
+			<DCC_Define>madExcept;$(DCC_Define)</DCC_Define>
+			<DCC_MapFile>3</DCC_MapFile>
 		</PropertyGroup>
 		<ItemGroup>
 			<DelphiCompile Include="TES5Edit.dpr">
@@ -107,39 +147,17 @@
 			<DCCReference Include="wbSort.pas"/>
 			<DCCReference Include="wbLOD.pas"/>
 			<DCCReference Include="wbLocalization.pas"/>
-			<DCCReference Include="frmViewMain.pas">
-				<Form>frmMain</Form>
-			</DCCReference>
-			<DCCReference Include="FilterOptionsFrm.pas">
-				<Form>frmFilterOptions</Form>
-			</DCCReference>
-			<DCCReference Include="FileSelectFrm.pas">
-				<Form>frmFileSelect</Form>
-			</DCCReference>
-			<DCCReference Include="ViewElementsFrm.pas">
-				<Form>frmViewElements</Form>
-			</DCCReference>
-			<DCCReference Include="EditWarningFrm.pas">
-				<Form>frmEditWarning</Form>
-			</DCCReference>
-			<DCCReference Include="frmWaitForm.pas">
-				<Form>frmWait</Form>
-			</DCCReference>
-			<DCCReference Include="frmLocalizationForm.pas">
-				<Form>frmLocalization</Form>
-			</DCCReference>
-			<DCCReference Include="frmLocalizePluginForm.pas">
-				<Form>frmLocalizePlugin</Form>
-			</DCCReference>
-			<DCCReference Include="frmScriptForm.pas">
-				<Form>frmScript</Form>
-			</DCCReference>
-			<DCCReference Include="frmOptionsForm.pas">
-				<Form>frmOptions</Form>
-			</DCCReference>
-			<DCCReference Include="frmLogAnalyzerForm.pas">
-				<Form>frmLogAnalyzer</Form>
-			</DCCReference>
+			<DCCReference Include="frmViewMain.pas"/>
+			<DCCReference Include="FilterOptionsFrm.pas"/>
+			<DCCReference Include="FileSelectFrm.pas"/>
+			<DCCReference Include="ViewElementsFrm.pas"/>
+			<DCCReference Include="EditWarningFrm.pas"/>
+			<DCCReference Include="frmWaitForm.pas"/>
+			<DCCReference Include="frmLocalizationForm.pas"/>
+			<DCCReference Include="frmLocalizePluginForm.pas"/>
+			<DCCReference Include="frmScriptForm.pas"/>
+			<DCCReference Include="frmOptionsForm.pas"/>
+			<DCCReference Include="frmLogAnalyzerForm.pas"/>
 			<DCCReference Include="frmLODGenForm.pas"/>
 			<DCCReference Include="frmTipForm.pas"/>
 			<DCCReference Include="wbDefinitionsFNV.pas"/>
@@ -160,6 +178,10 @@
 			</BuildConfiguration>
 			<BuildConfiguration Include="DebugLite">
 				<Key>Cfg_4</Key>
+				<CfgParent>Base</CfgParent>
+			</BuildConfiguration>
+			<BuildConfiguration Include="ReleaseLite">
+				<Key>Cfg_5</Key>
 				<CfgParent>Base</CfgParent>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Base">
@@ -207,9 +229,18 @@
 						<VersionInfoKeys Name="ProductVersion">3.2.1</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
-					<Excluded_Packages/>
+					<Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\bcboffice2k150.bpl">Embarcadero C++Builder Office 2000 Servers Package</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\bcbofficexp150.bpl">Embarcadero C++Builder Office XP Servers Package</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dcloffice2k150.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
+						<Excluded_Packages Name="$(BDSBIN)\dclofficexp150.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
+					</Excluded_Packages>
+					<Parameters_Win32>
+						<Parameters_Win32 Name="RunParams">-TES5</Parameters_Win32>
+						<Parameters_Win32 Name="DebugCWD">E:\dev\git\TES5Edit-mator</Parameters_Win32>
+					</Parameters_Win32>
 					<Parameters>
-						<Parameters Name="RunParams">-sse -edit</Parameters>
+						<Parameters Name="RunParams">-TES5</Parameters>
 					</Parameters>
 					<Parameters_Win32>
 						<Parameters_Win32 Name="RunParams">-sse -edit</Parameters_Win32>

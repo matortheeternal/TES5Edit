@@ -17,6 +17,8 @@
 // JCL_DEBUG_EXPERT_DELETEMAPFILE ON
 program TES5Edit;
 
+{$DEFINE LiteVersion}
+
 uses
   madExcept,
   Forms,
