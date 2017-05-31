@@ -16588,7 +16588,7 @@ end;
 procedure LoaderProgress(const s: string);
 begin
   if s <> '' then
-    frmMain.PostAddMessage('[' + FormatDateTime('nn:ss', Now - wbStartTime) + '] Background Loader: ' + s);
+    frmMain.PostAddMessage('[' + FormatDateTime('nn:ss:zzz', Now - wbStartTime) + '] Background Loader: ' + s);
   if frmMain.ForceTerminate then
     Abort;
 end;
