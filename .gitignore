@@ -229,3 +229,10 @@ __history
 FO4Dump
 /SSEDump
 SSEDump/*
+DebugLite/
+Edit Scripts/
+TES5Edit_log.txt
+TES5Edit.drc
+TES5Edit.map
+TES5Edit.mes
+bugreport.txt
