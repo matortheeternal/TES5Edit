@@ -3,7 +3,7 @@
 			<ProjectGuid>{12317C9C-736E-45A4-8CB7-E43FF92DD93C}</ProjectGuid>
 			<MainSource>TES5Edit.dpr</MainSource>
 			<Base>True</Base>
-			<Config Condition="'$(Config)'==''">ReleaseLite</Config>
+			<Config Condition="'$(Config)'==''">DebugLite</Config>
 			<AppType>Application</AppType>
 			<FrameworkType>VCL</FrameworkType>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
@@ -40,12 +40,6 @@
 		<PropertyGroup Condition="'$(Config)'=='DebugLite' or '$(Cfg_4)'!=''">
 			<Cfg_4>true</Cfg_4>
 			<CfgParent>Base</CfgParent>
-			<Base>true</Base>
-		</PropertyGroup>
-		<PropertyGroup Condition="'$(Platform)'=='Win32' and '$(Cfg_4)'=='true' or '$(Cfg_4_Win32)'!=''">
-			<Cfg_4_Win32>true</Cfg_4_Win32>
-			<CfgParent>Cfg_4</CfgParent>
-			<Cfg_4>true</Cfg_4>
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='ReleaseLite' or '$(Cfg_5)'!=''">
@@ -117,15 +111,11 @@
 			<ILINK_MapFileType>DetailedSegments</ILINK_MapFileType>
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Cfg_4_Win32)'!=''">
-			<DCC_Define>madExcept;$(DCC_Define)</DCC_Define>
-		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_5)'!=''">
 			<DCC_Define>LiteVersion;$(DCC_Define)</DCC_Define>
 			<DCC_ExeOutput>.\ReleaseLite</DCC_ExeOutput>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_5_Win32)'!=''">
-			<DCC_Define>madExcept;$(DCC_Define)</DCC_Define>
 			<DCC_MapFile>3</DCC_MapFile>
 		</PropertyGroup>
 		<ItemGroup>
@@ -172,6 +162,7 @@
 			<DCCReference Include="wbDefinitionsTES5.pas"/>
 			<DCCReference Include="wbDefinitionsTES5Saves.pas"/>
 			<DCCReference Include="wbSaveInterface.pas"/>
+			<DCCReference Include="Zlibex.pas"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>

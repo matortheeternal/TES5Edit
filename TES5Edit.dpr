@@ -20,7 +20,6 @@ program TES5Edit;
 {$DEFINE LiteVersion}
 
 uses
-  madExcept,
   Forms,
   Dialogs,
   SysUtils,
