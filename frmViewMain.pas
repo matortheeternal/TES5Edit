@@ -505,6 +505,7 @@ type
       var Allowed: Boolean);
     procedure mniNavApplyScriptClick(Sender: TObject);
     procedure mniNavOptionsClick(Sender: TObject);
+    procedure BenchmarkRecordByFormID(Args: TJvInterpreterArgs);
     procedure JvInterpreterProgram1GetValue(Sender: TObject; Identifier: string;
       var Value: Variant; Args: TJvInterpreterArgs; var Done: Boolean);
     procedure JvInterpreterProgram1GetUnitSource(UnitName: string; var Source: string;
@@ -15818,6 +15819,28 @@ begin
   end;
 end;
 
+procedure TfrmMain.BenchmarkRecordByFormID(Args: TJvInterpreterArgs);
+var
+  _File: IwbFile;
+  FormIDCount, i: Integer;
+  FormIDs: array of Cardinal;
+  start, completed: Cardinal;
+begin
+  if not Supports(IInterface(Args.Values[0]), IwbFile, _File) then
+    exit;
+  AddMessage('Benchmarking RecordByFormID');
+  FormIDCount := Integer(Args.Values[1]);
+  AddMessage('Selecting ' + IntToStr(FormIDCount) + ' random FormIDs');
+  SetLength(FormIDs, FormIDCount);
+  for i := Low(FormIDs) to High(FormIDs) do
+    FormIDs[i] := _File.Records[Random(_File.RecordCount)].LoadOrderFormID;
+  AddMessage('Benchmarking access');
+  start := GetTickCount;
+  for i := Low(FormIDs) to High(FormIDs) do
+    _File.RecordByFormID[FormIDs[i], True];
+  AddMessage(Format('Benchmark completed in %0.3fs', [(GetTickCount - start) / 1000.0]));
+end;
+
 procedure TfrmMain.JvInterpreterProgram1GetValue(Sender: TObject;
   Identifier: string; var Value: Variant; Args: TJvInterpreterArgs;
   var Done: Boolean);
@@ -16149,6 +16172,10 @@ begin
       Args.Values[3],                // GammaG
       Args.Values[4]                 // GammaB
     );
+    Done := True;
+  end
+  else if SameText(Identifier, 'BenchmarkRecordByFormID') and (Args.Count = 2) then begin
+    BenchmarkRecordByFormID(Args);
     Done := True;
   end;
 end;
