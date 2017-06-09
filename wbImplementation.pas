@@ -631,6 +631,8 @@ type
     function GetRecordCount: Integer;
     function GetHeader: IwbMainRecord;
 
+    procedure RecordsBySignature(var aList: TDynMainRecords; aSignature: String; var len: Integer; aCondition: TConditionFunc = nil);
+
     function GetLoadOrder: Integer;
     procedure ForceLoadOrder(aValue: Integer);
     procedure SetLoadOrder(aValue: Integer);
@@ -674,9 +676,8 @@ type
     procedure SortRecordsByEditorID;
 
     procedure CreateEditorIDSignatures;
-    procedure RecordsBySignature(var aList: TDynMainRecords; aSignature: String; var len: Integer);
     procedure SortEditorIDs(aSignature: String);
-    function SignatureIsSorted(aSignature: String): Boolean;
+    function EditorIDSorted(aSignature: String): Boolean;
 
     procedure AddMaster(const aFileName: string; isTemporary: Boolean = False); overload;
     procedure AddMaster(const aFile: IwbFile); overload;
@@ -3454,14 +3455,16 @@ begin
   Result := wbGroupOrder.IndexOf(aSignature) > -1;
 end;
 
-procedure TwbFile.RecordsBySignature(var aList: TDynMainRecords; aSignature: String; var len: Integer);
+procedure TwbFile.RecordsBySignature(var aList: TDynMainRecords; aSignature: String; var len: Integer; aCondition: TConditionFunc = nil);
 var
   sig: TwbSignature;
+  bNoCondition: Boolean;
   group: IwbGroupRecord;
   count, aLen, i: Integer;
   rec: IwbMainRecord;
 begin
   sig := StrToSignature(aSignature);
+  bNoCondition := not Assigned(aCondition);
   // iterate through group record for top level groups
   if IsTopLevelSignature(aSignature) then begin
     group := GetGroupBySignature(sig);
@@ -3472,7 +3475,7 @@ begin
     // allocate enough positions for the full group size and resize later
     SetLength(aList, aLen);
     for i := 0 to Pred(count) do
-      if Supports(group.Elements[i], IwbMainRecord, rec) then begin
+      if Supports(group.Elements[i], IwbMainRecord, rec) and (bNoCondition or aCondition(rec)) then begin
         aList[len] := rec;
         Inc(len);
       end;
@@ -3482,7 +3485,7 @@ begin
     aLen := len;
     for i := 0 to Pred(GetRecordCount) do begin
       rec := GetRecord(i);
-      if rec.Signature = sig then begin
+      if (rec.Signature = sig) and (bNoCondition or aCondition(rec)) then begin
         // allocate additonal memory as needed in 1KB blocks
         if len >= aLen then begin
           SetLength(aList, aLen + 256);
@@ -3511,7 +3514,7 @@ begin
     wbMergeSort(@flRecordsByEditorID[0], flRecordsByEditorIDCount, CompareRecordsByEditorID);
 end;
 
-function TwbFile.SignatureIsSorted(aSignature: string): Boolean;
+function TwbFile.EditorIDSorted(aSignature: string): Boolean;
 begin
   Result := flEditorIDSignatures.IndexOf(aSignature) > -1;
 end;
@@ -11258,8 +11261,8 @@ begin
   if grStruct.grsGroupType = 0 then begin
     aSignature := AnsiString(TwbSignature(grStruct.grsLabel));
     _File := GetFile;
-    bIsSorted := _File.SignatureIsSorted(aSignature);
-    if not bIsSorted and wbSortEditorIDsOnDemand then begin
+    bIsSorted := _File.EditorIDSorted(aSignature);
+    if not bIsSorted and wbSortOnDemand then begin
       _File.SortEditorIDs(aSignature);
       bIsSorted := True;
     end;
