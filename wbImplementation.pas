@@ -681,9 +681,11 @@ type
     procedure SortRecords;
     procedure SortRecordsByEditorID;
 
+    procedure SortAllEditorIDs;
     procedure SortEditorIDs(aSignature: String);
     function EditorIDSorted(aSignature: String): Boolean;
 
+    procedure SortAllNames;
     procedure SortNames(aSignature: String);
     function NamesSorted(aSignature: String): Boolean;
 
@@ -3548,17 +3550,37 @@ begin
     SetLength(aList, len);
 end;
 
+procedure TwbFile.SortAllEditorIDs;
+var
+  i, n, initialLen: Integer;
+  rec: IwbMainRecord;
+begin
+  initialLen := flRecordsByEditorIDCount;
+  SetLength(flRecordsByEditorID, GetRecordCount);
+  for i := 0 to Pred(GetRecordCount) do begin
+    rec := GetRecord(i);
+    if EditorIDSorted(AnsiString(rec.Signature)) then
+      continue;
+    flRecordsbyEditorID[flRecordsByEditorIDCount] := rec;
+    Inc(flRecordsByEditorIDCount);
+  end;
+  if flRecordsByEditorIDCount > initialLen then
+    wbMergeSort(@flRecordsByEditorID[0], flRecordsByEditorIDCount, CompareRecordsByEditorID);
+end;
+
 procedure TwbFile.SortEditorIDs(aSignature: String);
 var
   len: Integer;
 begin
-  if flEditorIDSignatures.IndexOf(aSignature) > -1 then
-    exit;
-  flEditorIDSignatures.Add(aSignature);
-  len := flRecordsByEditorIDCount;
-  RecordsBySignature(TDynMainRecords(flRecordsByEditorID), aSignature, flRecordsByEditorIDCount);
-  if flRecordsByEditorIDCount > len then
-    wbMergeSort(@flRecordsByEditorID[0], flRecordsByEditorIDCount, CompareRecordsByEditorID);
+  if (aSignature = '*') or (aSignature = '') then
+    SortAllEditorIDs
+  else if not EditorIDSorted(aSignature) then begin
+    flEditorIDSignatures.Add(aSignature);
+    len := flRecordsByEditorIDCount;
+    RecordsBySignature(TDynMainRecords(flRecordsByEditorID), aSignature, flRecordsByEditorIDCount);
+    if flRecordsByEditorIDCount > len then
+      wbMergeSort(@flRecordsByEditorID[0], flRecordsByEditorIDCount, CompareRecordsByEditorID);
+  end;
 end;
 
 function TwbFile.EditorIDSorted(aSignature: string): Boolean;
@@ -3571,17 +3593,37 @@ begin
   Result := rec.FullName <> '';
 end;
 
+procedure TwbFile.SortAllNames;
+var
+  i, n, initialLen: Integer;
+  rec: IwbMainRecord;
+begin
+  initialLen := flRecordsByNameCount;
+  SetLength(flRecordsByName, GetRecordCount);
+  for i := 0 to Pred(GetRecordCount) do begin
+    rec := GetRecord(i);
+    if NamesSorted(AnsiString(rec.Signature)) or not HasFullName(rec) then
+      continue;
+    flRecordsByName[flRecordsByNameCount] := rec;
+    Inc(flRecordsByNameCount);
+  end;
+  if flRecordsByNameCount > initialLen then
+    wbMergeSort(@flRecordsByName[0], flRecordsByNameCount, CompareRecordsByFullName);
+end;
+
 procedure TwbFile.SortNames(aSignature: String);
 var
   len: Integer;
 begin
-  if flNameSignatures.IndexOf(aSignature) > -1 then
-    exit;
-  flNameSignatures.Add(aSignature);
-  len := flRecordsByNameCount;
-  RecordsBySignature(TDynMainRecords(flRecordsByName), aSignature, flRecordsByNameCount, HasFullName);
-  if flRecordsByNameCount > len then
-    wbMergeSort(@flRecordsByName[0], flRecordsByNameCount, CompareRecordsByFullName);
+  if (aSignature = '*') or (aSignature = '') then
+    SortAllEditorIDs
+  else if not NamesSorted(aSignature) then begin
+    flNameSignatures.Add(aSignature);
+    len := flRecordsByNameCount;
+    RecordsBySignature(TDynMainRecords(flRecordsByName), aSignature, flRecordsByNameCount, HasFullName);
+    if flRecordsByNameCount > len then
+      wbMergeSort(@flRecordsByName[0], flRecordsByNameCount, CompareRecordsByFullName);
+  end;
 end;
 
 function TwbFile.NamesSorted(aSignature: String): Boolean;
