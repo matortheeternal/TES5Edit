@@ -1313,7 +1313,15 @@ var
   GroupRecord: IwbGroupRecord;
 begin
   if Supports(IInterface(Args.Values[0]), IwbGroupRecord, GroupRecord) then
-    Value := GroupRecord. MainRecordByEditorID[string(Args.Values[1])];
+    Value := GroupRecord.MainRecordByEditorID[string(Args.Values[1])];
+end;
+
+procedure IwbGroupRecord_MainRecordByName(var Value: Variant; Args: TJvInterpreterArgs);
+var
+  GroupRecord: IwbGroupRecord;
+begin
+  if Supports(IInterface(Args.Values[0]), IwbGroupRecord, GroupRecord) then
+    Value := GroupRecord.MainRecordByName[string(Args.Values[1])];
 end;
 
 procedure IwbGroupRecord_FindChildGroup(var Value: Variant; Args: TJvInterpreterArgs);
@@ -1453,6 +1461,14 @@ begin
     Value := _File.RecordByEditorID[string(Args.Values[1])];
 end;
 
+procedure IwbFile_RecordByName(var Value: Variant; Args: TJvInterpreterArgs);
+var
+  _File: IwbFile;
+begin
+  if Supports(IInterface(Args.Values[0]), IwbFile, _File) then
+    Value := _File.RecordByName[string(Args.Values[1])];
+end;
+
 procedure IwbFile_AddMasterIfMissing(var Value: Variant; Args: TJvInterpreterArgs);
 var
   _File: IwbFile;
@@ -1511,6 +1527,16 @@ var
 begin
   if Supports(IInterface(Args.Values[0]), IwbFile, _File) then begin
     _File.SortEditorIDs(Args.Values[1]);
+    Value := True;
+  end;
+end;
+
+procedure IwbFile_SortNames(var Value: Variant; Args: TJvInterpreterArgs);
+var
+  _File : IwbFile;
+begin
+  if Supports(IInterface(Args.Values[0]), IwbFile, _File) then begin
+    _File.SortNames(Args.Values[1]);
     Value := True;
   end;
 end;
@@ -2010,7 +2036,8 @@ begin
     AddFunction(cUnit, 'GroupType', IwbGroupRecord_GroupType, 1, [varEmpty], varEmpty);
     AddFunction(cUnit, 'GroupLabel', IwbGroupRecord_GroupLabel, 1, [varEmpty], varEmpty);
     AddFunction(cUnit, 'ChildrenOf', IwbGroupRecord_ChildrenOf, 1, [varEmpty], varEmpty);
-    AddFunction(cUnit, 'MainRecordByEditorID', IwbGroupRecord_MainRecordByEditorID, 2, [varEmpty], varEmpty);
+    AddFunction(cUnit, 'MainRecordByEditorID', IwbGroupRecord_MainRecordByEditorID, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction(cUnit, 'MainRecordByName', IwbGroupRecord_MainRecordByName, 2, [varEmpty, varEmpty], varEmpty);
     AddFunction(cUnit, 'FindChildGroup', IwbGroupRecord_FindChildGroup, 3, [varEmpty, varEmpty, varEmpty], varEmpty);
 
     { IwbFile }
@@ -2028,6 +2055,7 @@ begin
     AddFunction(cUnit, 'GroupBySignature', IwbFile_GroupBySignature, 2, [varEmpty, varString], varEmpty);
     AddFunction(cUnit, 'RecordByFormID', IwbFile_RecordByFormID, 3, [varEmpty, varInteger, varBoolean], varEmpty);
     AddFunction(cUnit, 'RecordByEditorID', IwbFile_RecordByEditorID, 2, [varEmpty, varString], varEmpty);
+    AddFunction(cUnit, 'RecordByName', IwbFile_RecordByName, 2, [varEmpty, varString], varEmpty);
     AddFunction(cUnit, 'AddMasterIfMissing', IwbFile_AddMasterIfMissing, 2, [varEmpty, varString], varEmpty);
     AddFunction(cUnit, 'HasMaster', IwbFile_HasMaster, 2, [varEmpty, varString], varEmpty);
     AddFunction(cUnit, 'HasGroup', IwbFile_HasGroup, 2, [varEmpty, varString], varEmpty);
@@ -2035,6 +2063,7 @@ begin
     AddFunction(cUnit, 'FileFormIDtoLoadOrderFormID', IwbFile_FileFormIDtoLoadOrderFormID, 2, [varEmpty, varString], varEmpty);
     AddFunction(cUnit, 'FileWriteToStream', IwbFile_WriteToStream, 3, [varEmpty, varEmpty, varEmpty], varEmpty);
     AddFunction(cUnit, 'SortEditorIDs', IwbFile_SortEditorIDs, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction(cUnit, 'SortNames', IwbFile_SortNames, 2, [varEmpty, varEmpty], varEmpty);
     AddFunction(cUnit, 'RecordsBySignature', IwbFile_RecordsBySignature, 3, [varEmpty, varEmpty, varEmpty], varEmpty);
 
     { IwbContainerHandler }
