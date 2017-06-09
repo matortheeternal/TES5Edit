@@ -73,7 +73,8 @@ var
   wbResolveAlias           : Boolean  = True;
   wbActorTemplateHide      : Boolean  = True;
   wbClampFormID            : Boolean  = True;
-  wbSortEditorIDsOnDemand  : Boolean  = True;
+  wbAllowSlowSearching     : Boolean  = False;
+  wbSortOnDemand           : Boolean  = True;
   wbDoNotBuildRefsFor      : TStringList;
   wbCopyIsRunning          : Integer  = 0;
 
@@ -759,6 +760,7 @@ type
   TwbPluginExtensions = TDynStrings;
 
   TDynMainRecords = array of IwbMainRecord;
+  TConditionFunc = reference to function(rec: IwbMainRecord): Boolean;
 
   IwbFile = interface(IwbContainer)
     ['{38AA15A6-F652-45C7-B875-9CB502E5DA92}']
@@ -805,9 +807,10 @@ type
     function GetHasNoFormID: Boolean;
     procedure SetHasNoFormID(Value: Boolean);
 
+    procedure RecordsBySignature(var aList: TDynMainRecords; aSignature: String; var len: Integer; aCondition: TConditionFunc = nil);
+
     procedure SortEditorIDs(aSignature: String);
-    procedure RecordsBySignature(var aList: TDynMainRecords; aSignature: String; var len: Integer);
-    function SignatureIsSorted(aSignature: String): Boolean;
+    function EditorIDSorted(aSignature: String): Boolean;
 
     property FileName: string
       read GetFileName;
