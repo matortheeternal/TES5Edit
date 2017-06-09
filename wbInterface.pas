@@ -770,6 +770,7 @@ type
     function GetMasterCount: Integer;
     function GetRecordByFormID(aFormID: Cardinal; aAllowInjected: Boolean): IwbMainRecord;
     function GetRecordByEditorID(const aEditorID: string): IwbMainRecord;
+    function GetRecordByName(const aName: string): IwbMainRecord;
     function GetLoadOrder: Integer;
     procedure ForceLoadOrder(aValue: Integer);
     function GetGroupBySignature(const aSignature: TwbSignature): IwbGroupRecord;
@@ -812,6 +813,9 @@ type
     procedure SortEditorIDs(aSignature: String);
     function EditorIDSorted(aSignature: String): Boolean;
 
+    procedure SortNames(aSignature: String);
+    function NamesSorted(aSignature: String): Boolean;
+
     property FileName: string
       read GetFileName;
     property UnsavedSince: TDateTime
@@ -827,6 +831,8 @@ type
       read GetRecordByFormID;
     property RecordByEditorID[const aEditorID: string]: IwbMainRecord
       read GetRecordByEditorID;
+    property RecordByName[const aName: string]: IwbMainRecord
+      read GetRecordByName;
      property GroupBySignature[const aSignature: TwbSignature]: IwbGroupRecord
       read GetGroupBySignature;
 
@@ -1167,6 +1173,7 @@ type
     function FindChildGroup(aType: Integer; aMainRecord: IwbMainRecord): IwbGroupRecord;
 
     function GetMainRecordByEditorID(const aEditorID: string): IwbMainRecord;
+    function GetMainRecordByName(const aName: string): IwbMainRecord;
     function GetMainRecordByFormID(const aFormID: Cardinal): IwbMainRecord;
 
     procedure AddElement(const aElement: IwbElement);
@@ -1182,6 +1189,8 @@ type
 
     property MainRecordByEditorID[const aEditorID: string]: IwbMainRecord
       read GetMainRecordByEditorID;
+    property MainRecordByName[const aName: string]: IwbMainRecord
+      read GetMainRecordByName;
     property MainRecordByFormID[const aFormID: Cardinal]: IwbMainRecord
       read GetMainRecordByFormID;
   end;

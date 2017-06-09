@@ -576,6 +576,10 @@ type
     flRecordsByEditorIDCount : Integer; {only used during loading}
     flEditorIDSignatures     : TwbFastStringList;
 
+    flRecordsByName          : array of IwbMainRecord;
+    flRecordsByNameCount     : Integer; {only used during loading}
+    flNameSignatures         : TwbFastStringList;
+
     flLoadFinished           : Boolean;
     flFormIDsSorted          : Boolean;
 
@@ -600,6 +604,7 @@ type
     function FindFormID(aFormID: Cardinal; var Index: Integer): Boolean;
     function FindInjectedID(aFormID: Cardinal; var Index: Integer): Boolean;
     function FindEditorID(const aEditorID: string; var Index: Integer): Boolean;
+    function FindName(const aName: string; var Index: Integer): Boolean;
     function GetMasterRecordByFormID(aFormID: Cardinal; aAllowInjected: Boolean): IwbMainRecord;
 
     function GetAddList: TDynStrings; override;
@@ -624,6 +629,7 @@ type
     function GetMasterCount: Integer;
     function GetRecordByFormID(aFormID: Cardinal; aAllowInjected: Boolean): IwbMainRecord;
     function GetRecordByEditorID(const aEditorID: string): IwbMainRecord;
+    function GetRecordByName(const aName: string): IwbMainRecord;
     function GetGroupBySignature(const aSignature: TwbSignature): IwbGroupRecord;
     function HasGroup(const aSignature: TwbSignature): Boolean;
     function GetFileStates: TwbFileStates;
@@ -675,13 +681,16 @@ type
     procedure SortRecords;
     procedure SortRecordsByEditorID;
 
-    procedure CreateEditorIDSignatures;
     procedure SortEditorIDs(aSignature: String);
     function EditorIDSorted(aSignature: String): Boolean;
+
+    procedure SortNames(aSignature: String);
+    function NamesSorted(aSignature: String): Boolean;
 
     procedure AddMaster(const aFileName: string; isTemporary: Boolean = False); overload;
     procedure AddMaster(const aFile: IwbFile); overload;
 
+    procedure CreateSignatureLists;
     constructor Create(const aFileName: string; aLoadOrder: Integer; aCompareTo: string; aOnlyHeader: Boolean; IsTemporary: Boolean = False);
     constructor CreateNew(const aFileName: string; aLoadOrder: Integer);
   public
@@ -1531,7 +1540,9 @@ type
 
     function FindChildGroup(aType: Integer; aMainRecord: IwbMainRecord): IwbGroupRecord;
     function FindEditorID(const aEditorID: string): IwbMainRecord;
+    function FindName(const aName: string): IwbMainRecord;
 
+    function GetMainRecordByName(const aName: string): IwbMainRecord;
     function GetMainRecordByEditorID(const aEditorID: string): IwbMainRecord;
     function GetMainRecordByFormID(const aFormID: Cardinal): IwbMainRecord;
 
@@ -1755,6 +1766,64 @@ begin
   Result := CmpI32(LoadOrder1, LoadOrder2);
   if Result = 0 then
     Result := CmpW32(IwbFile(Item1).ElementID, IwbFile(Item2).ElementID);
+end;
+
+function SearchRecordsByEditorID(Item, Value: Pointer): Integer;
+begin
+  Result := CompareText(IwbMainRecord(Item).EditorID, PString(Value)^);
+end;
+
+function SearchRecordsByFullName(Item, Value: Pointer): Integer;
+begin
+  Result := CompareText(IwbMainRecord(Item).FullName, PString(Value)^);
+end;
+
+function SearchRecordsByFixedFormID(Item, Value: Pointer): Integer;
+begin
+  Result := CmpW32(IwbMainRecord(Item).FixedFormID, PCardinal(Value)^);
+end;
+
+function SearchRecordsByFormID(Item, Value: Pointer): Integer;
+begin
+  Result := CmpW32(IwbMainRecord(Item).FormID and $00FFFFFF, PCardinal(Value)^);
+end;
+
+function SearchBySortKey(Item, Value: Pointer): Integer;
+begin
+  Result := CompareStr(IwbElement(Item).SortKey[False], PString(Value)^);
+end;
+
+function SearchByExtendedSortKey(Item, Value: Pointer): Integer;
+begin
+  Result := CompareStr(IwbElement(Item).SortKey[True], PString(Value)^);
+end;
+
+function SearchByRecord(Item1, Item2: Pointer): Integer;
+begin
+  Result := CmpW32(IwbMainRecord(Item1).LoadOrderFormID , IwbMainRecord(Item2).LoadOrderFormID);
+  if Result = 0 then
+    Result := CmpW32(IwbMainRecord(Item1)._File.LoadOrder, IwbMainRecord(Item2)._File.LoadOrder);
+end;
+
+function wbBinarySearch(aList: PwbPointerArray; L, H: Integer; aValue: Pointer; aCompare: TSearchCompare; var Index: Integer): Boolean; overload;
+var
+  I, C: Integer;
+begin
+  Result := False;
+  while L <= H do begin
+    I := (L + H) shr 1;
+    C := aCompare(aList[I], aValue);
+    if C < 0 then
+      L := I + 1
+    else begin
+      H := I - 1;
+      if C = 0 then begin
+        Result := True;
+        L := I;
+      end;
+    end;
+  end;
+  Index := L;
 end;
 
 { TwbFile }
@@ -2267,11 +2336,12 @@ begin
   end;
 end;
 
-procedure TwbFile.CreateEditorIDSignatures;
+procedure TwbFile.CreateSignatureLists;
 begin
   flEditorIDSignatures := TwbFastStringList.Create;
   flEditorIDSignatures.Add('GMST');
   flEditorIDSignatures.Add('MGEF');
+  flNameSignatures := TwbFastStringList.Create;
 end;
 
 constructor TwbFile.Create(const aFileName: string; aLoadOrder: Integer; aCompareTo: string; aOnlyHeader: Boolean; IsTemporary: Boolean = False);
@@ -2289,7 +2359,7 @@ begin
   flCompareTo := aCompareTo;
   flLoadOrder := aLoadOrder;
   flFileName := aFileName;
-  CreateEditorIDSignatures;
+  CreateSignatureLists;
   flOpenFile;
   Scan;
 end;
@@ -2299,6 +2369,7 @@ var
   Header : IwbMainRecord;
 begin
   Include(flStates, fsIsNew);
+  CreateSignatureLists;
   flLoadOrder := aLoadOrder;
   flFileName := aFileName;
   Header := TwbMainRecord.Create(Self, wbHeaderSignature, 0);
@@ -2323,6 +2394,7 @@ end;
 destructor TwbFile.Destroy;
 begin
   flEditorIDSignatures.Free;
+  flNameSignatures.Free;
   flCloseFile;
   inherited;
 end;
@@ -2388,6 +2460,14 @@ begin
     end;
   end;
   Index := L;
+end;
+
+function TwbFile.FindName(const aName: string; var Index: Integer): Boolean;
+begin
+  Result := False;
+  if not flLoadFinished then
+    Exit;
+  Result := wbBinarySearch(@flRecordsByName[0], Low(flRecordsByName), High(flRecordsByName), @aName, SearchRecordsByFullName, Index);
 end;
 
 function TwbFile.FindFormID(aFormID: Cardinal; var Index: Integer): Boolean;
@@ -2807,6 +2887,21 @@ begin
   else
     for i := Pred(GetMasterCount) downto 0 do begin
       Result := GetMaster(i).RecordByEditorID[aEditorID];
+      if Assigned(Result) then
+        Exit;
+    end;
+end;
+
+function TwbFile.GetRecordByName(const aName: string): IwbMainRecord;
+var
+  i: Integer;
+begin
+  Result := nil;
+  if FindName(aName, i) then
+    Result := flRecordsByName[i]
+  else
+    for i := Pred(GetMasterCount) downto 0 do begin
+      Result := GetMaster(i).RecordByName[aName];
       if Assigned(Result) then
         Exit;
     end;
@@ -3447,6 +3542,11 @@ begin
   Result := CompareText(IwbMainRecord(Item1).EditorID, IwbMainRecord(Item2).EditorID);
 end;
 
+function CompareRecordsByFullName(Item1, Item2: Pointer): Integer;
+begin
+  Result := CompareText(IwbMainRecord(Item1).FullName, IwbMainRecord(Item2).FullName);
+end;
+
 function IsTopLevelSignature(aSignature: String): Boolean;
 begin
   Result := wbGroupOrder.IndexOf(aSignature) > -1;
@@ -3514,6 +3614,29 @@ end;
 function TwbFile.EditorIDSorted(aSignature: string): Boolean;
 begin
   Result := flEditorIDSignatures.IndexOf(aSignature) > -1;
+end;
+
+function HasFullName(rec: IwbMainRecord): Boolean;
+begin
+  Result := rec.FullName <> '';
+end;
+
+procedure TwbFile.SortNames(aSignature: String);
+var
+  len: Integer;
+begin
+  if flNameSignatures.IndexOf(aSignature) > -1 then
+    exit;
+  flNameSignatures.Add(aSignature);
+  len := flRecordsByNameCount;
+  RecordsBySignature(TDynMainRecords(flRecordsByName), aSignature, flRecordsByNameCount, HasFullName);
+  if flRecordsByNameCount > len then
+    wbMergeSort(@flRecordsByName[0], flRecordsByNameCount, CompareRecordsByFullName);
+end;
+
+function TwbFile.NamesSorted(aSignature: String): Boolean;
+begin
+  Result := flNameSignatures.IndexOf(aSignature) > -1;
 end;
 
 procedure TwbFile.SortMasters;
@@ -11293,6 +11416,48 @@ begin
 
   if not Assigned(Result) then
     Result := FindEditorID(aEditorID);
+end;
+
+function TwbGroupRecord.FindName(const aName: string): IwbMainRecord;
+var
+  i: Integer;
+begin
+  for i := Low(cntElements) to High(cntElements) do
+    if Supports(cntElements[i], IwbMainRecord, Result) then
+      if SameText(Result.Name, aName) then
+        Exit;
+  Result := nil;
+end;
+
+function TwbGroupRecord.GetMainRecordByName(const aName: string): IwbMainRecord;
+var
+  SelfRef    : IwbContainerElementRef;
+  aSignature : String;
+  _File      : IwbFile;
+  bIsSorted  : Boolean;
+begin
+  Result := nil;
+
+  SelfRef := Self;
+  DoInit;
+
+  if grStruct.grsGroupType = 0 then begin
+    aSignature := AnsiString(TwbSignature(grStruct.grsLabel));
+    _File := GetFile;
+    bIsSorted := _File.NamesSorted(aSignature);
+    if not bIsSorted and wbSortOnDemand then begin
+      _File.SortNames(aSignature);
+      bIsSorted := True;
+    end;
+    if bIsSorted then begin
+      Result := _File.RecordByName[aName];
+      if Result.Signature <> aSignature then
+        Result := nil;
+    end;
+  end;
+
+  if not Assigned(Result) then
+    Result := FindName(aName);
 end;
 
 function TwbGroupRecord.GetMainRecordByFormID(const aFormID: Cardinal): IwbMainRecord;
