@@ -3554,7 +3554,7 @@ end;
 
 procedure TwbFile.SortAllEditorIDs;
 var
-  i, n, initialLen: Integer;
+  i, initialLen: Integer;
   rec: IwbMainRecord;
 begin
   initialLen := flRecordsByEditorIDCount;
@@ -3597,7 +3597,7 @@ end;
 
 procedure TwbFile.SortAllNames;
 var
-  i, n, initialLen: Integer;
+  i, initialLen: Integer;
   rec: IwbMainRecord;
 begin
   initialLen := flRecordsByNameCount;
