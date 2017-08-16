@@ -184,7 +184,7 @@ type
     caOverride,
     caConflict,
     caConflictCritical
-    );
+  );
 
   TByteSet = set of Byte;
   TConflictAllSet = set of TConflictAll;
@@ -203,7 +203,7 @@ type
     ctIdenticalToMasterWinsConflict,
     ctConflictWins,
     ctConflictLoses
-    );
+  );
 
   TConflictThisSet = set of TConflictThis;
   TConflictThisColors = array[TConflictThis] of TColor;
