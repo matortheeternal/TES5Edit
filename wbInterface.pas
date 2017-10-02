@@ -764,7 +764,8 @@ type
     fsIsHardcoded,
     fsIsGameMaster,
     fsIsTemporary,
-    fsHasNoFormID
+    fsHasNoFormID,
+    fsIsEditable
   );
 
   TwbFileStates = set of TwbFileState;
@@ -791,6 +792,7 @@ type
     function HasGroup(const aSignature: TwbSignature): Boolean;
     function GetFileStates: TwbFileStates;
     procedure BuildReachable;
+    procedure SetIsEditable(state: Boolean);
 
     function LoadOrderFormIDtoFileFormID(aFormID: Cardinal): Cardinal;
     function FileFormIDtoLoadOrderFormID(aFormID: Cardinal): Cardinal;
