@@ -67,7 +67,8 @@ uses
   wbDefinitionsTES5 in 'wbDefinitionsTES5.pas',
   wbDefinitionsTES5Saves in 'wbDefinitionsTES5Saves.pas',
   wbSaveInterface in 'wbSaveInterface.pas',
-  Zlibex in 'Zlibex.pas';
+  Zlibex in 'Zlibex.pas'
+  Vectors in 'Vectors.pas';
 
 {$R *.res}
 {$MAXSTACKSIZE 2097152}

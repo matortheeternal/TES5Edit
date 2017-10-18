@@ -27,6 +27,7 @@ uses
   IniFiles,
   Registry,
   Math,
+  Vectors,
   RegularExpressionsCore,
   wbInterface;
 
@@ -111,6 +112,44 @@ begin
 end;
 
 
+{ TVector3D }
+
+procedure TVector3D_Create(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := O2V(TVector3D.Create(Extended(Args.Values[0]), Extended(Args.Values[1]), Extended(Args.Values[2])));
+end;
+
+procedure TVector3D_Read_X(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := TVector3D(Args.Obj).X;
+end;
+
+procedure TVector3D_Read_Y(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := TVector3D(Args.Obj).Y;
+end;
+
+procedure TVector3D_Read_Z(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := TVector3D(Args.Obj).Z;
+end;
+
+procedure TVector3D_Write_X(const Value: Variant; Args: TJvInterpreterArgs);
+begin
+  TVector3D(Args.Obj).X := Value;
+end;
+
+procedure TVector3D_Write_Y(const Value: Variant; Args: TJvInterpreterArgs);
+begin
+  TVector3D(Args.Obj).Y := Value;
+end;
+
+procedure TVector3D_Write_Z(const Value: Variant; Args: TJvInterpreterArgs);
+begin
+  TVector3D(Args.Obj).Z := Value;
+end;
+
+
 { TStrings }
 
 procedure TStrings_Read_Delimiter(var Value: Variant; Args: TJvInterpreterArgs);
@@ -154,7 +193,6 @@ procedure TStrings_Write_ValueFromIndex(const Value: Variant; Args: TJvInterpret
 begin
   TStrings(Args.Obj).ValueFromIndex[Args.Values[0]] := Value;
 end;
-
 
 
 { TStringList }
@@ -1080,6 +1118,16 @@ begin
     AddFunction('Math', 'Min', JvInterpreter_Min, 2, [varEmpty, varEmpty], varEmpty);
     AddFunction('Math', 'IntPower', JvInterpreter_IntPower, 2, [varEmpty,varEmpty], varEmpty);
     AddFunction('Math', 'Power', JvInterpreter_Power, 2, [varEmpty,varEmpty], varEmpty);
+
+    { TVector3D }
+    AddClass('Vectors', TVector3D, 'TVector3D');
+    AddGet(TVector3D, 'Create', TVector3D_Create, 3, [varEmpty, varEmpty, varEmpty], varEmpty);
+    AddGet(TVector3D, 'X', TVector3D_Read_X, 0, [varEmpty], varEmpty);
+    AddSet(TVector3D, 'X', TVector3D_Write_X, 0, [varEmpty]);
+    AddGet(TVector3D, 'Y', TVector3D_Read_Y, 0, [varEmpty], varEmpty);
+    AddSet(TVector3D, 'Y', TVector3D_Write_Y, 0, [varEmpty]);
+    AddGet(TVector3D, 'Z', TVector3D_Read_Z, 0, [varEmpty], varEmpty);
+    AddSet(TVector3D, 'Z', TVector3D_Write_Z, 0, [varEmpty]);
 
     { TStrings }
     AddGet(TStrings, 'Delimiter', TStrings_Read_Delimiter, 0, [varEmpty], varEmpty);
