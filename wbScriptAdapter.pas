@@ -54,7 +54,8 @@ uses
   JvInterpreter_Menus,
   JvInterpreter,
   JvInterpreterFm,
-  wbScriptAdapterMisc;
+  wbScriptAdapterMisc,
+  wbScriptAdapterDF;
 
 const
   cUnit = 'Dummy';
@@ -1888,7 +1889,7 @@ begin
     AddConst(cUnit, 'resTexture', ord(resTexture));
     AddConst(cUnit, 'resSound', ord(resSound));
     AddConst(cUnit, 'resMusic', ord(resMusic));
-
+    AddConst(cUnit, 'resMaterial', ord(resMaterial));
 
     AddFunction(cUnit, 'Assigned', _Assigned, 1, [varEmpty], varEmpty);
     AddFunction(cUnit, 'ObjectToElement', ObjectToElement, 1, [varEmpty], varEmpty);
@@ -2109,6 +2110,7 @@ begin
   JvInterpreter_Menus.RegisterJvInterpreterAdapter(GlobalJvInterpreterAdapter);
   //JvInterpreter_JvEditor.RegisterJvInterpreterAdapter(GlobalJvInterpreterAdapter);
   wbScriptAdapterMisc.RegisterJvInterpreterAdapter(GlobalJvInterpreterAdapter);
+  wbScriptAdapterDF.RegisterJvInterpreterAdapter(GlobalJvInterpreterAdapter);
 end;
 
 initialization

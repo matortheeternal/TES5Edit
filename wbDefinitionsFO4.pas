@@ -975,8 +975,8 @@ var
   wbScriptEntry: IwbStructDef;
   wbScriptFlags: IwbIntegerDef;
   wbScriptPropertyObject: IwbUnionDef;
-	wbScriptPropertyStruct: IwbArrayDef;
-	wbScriptProperties: IwbArrayDef;
+  wbScriptPropertyStruct: IwbArrayDef;
+  wbScriptProperties: IwbArrayDef;
   wbScriptFragments: IwbStructDef;
   wbScriptFragmentsQuest: IwbStructDef;
   wbScriptFragmentsInfo: IwbStructDef;
@@ -1877,6 +1877,61 @@ begin
     EventMember := 0;
   end;
   Result := EventMember shl 16 + EventFunction;
+end;
+
+function wbOBTEAddonIndexToStr(aInt: Int64; const aElement: IwbElement; aType: TwbCallbackType): string;
+var
+  MainRecord, OMOD: IwbMainRecord;
+  Includes, Include: IwbContainer;
+  Entries, Entry: IwbContainerElementRef;
+  i, j, AddonIndex: Integer;
+  bFoundOverride: Boolean;
+begin
+  Result := '';
+  case aType of
+    ctToStr, ctToEditValue: Result := IntToStr(aInt);
+    ctCheck: begin
+
+      AddonIndex := aInt;
+
+      // check index override from "AddonIndex" property of Includes
+      bFoundOverride := False;
+      if Assigned(aElement.Container) and Supports(aElement.Container.ElementByName['Includes'], IwbContainer, Includes) then
+        for i := 0 to Pred(Includes.ElementCount) do begin
+          if not Supports(Includes.Elements[i], IwbContainer, Include) then
+            Continue;
+          if not Supports(Include.ElementByName['Mod'].LinksTo, IwbMainRecord, OMOD) then
+            Continue;
+          if not Supports(OMOD.ElementByPath['DATA\Properties'], IwbContainerElementRef, Entries) then
+            Continue;
+          for j := 0 to Pred(Entries.ElementCount) do
+            if Supports(Entries.Elements[j], IwbContainerElementRef, Entry) then
+              if Entry.ElementEditValues['Property'] = 'AddonIndex' then begin
+                AddonIndex := Entry.ElementNativeValues['Value 1 - Int'];
+                bFoundOverride := True;
+                Break;
+              end;
+
+          if bFoundOverride then
+            Break;
+        end;
+
+      if AddonIndex = -1 then
+        Exit;
+
+      MainRecord := aElement.ContainingMainRecord;
+      if not Assigned(MainRecord) then
+        Exit;
+
+      if Supports(MainRecord.ElementByName['Models'], IwbContainerElementRef, Entries) then
+        for i := 0 to Pred(Entries.ElementCount) do
+          if Supports(Entries.Elements[i], IwbContainerElementRef, Entry) then
+            if Entry.ElementNativeValues['INDX'] = AddonIndex then
+              Exit;
+
+      Result := '<Warning: Invalid Addon Index ' + IntToStr(AddonIndex) + '>';
+    end;
+  end;
 end;
 
 procedure wbMESGDNAMAfterSet(const aElement: IwbElement; const aOldValue, aNewValue: Variant);
@@ -6946,8 +7001,8 @@ begin
     wbRStructSK([0], 'Model', [
       wbString(MODL, 'Model Filename', 0, cpNormal, True),
       wbMODT,
-      wbMODS,
       wbMODC,
+      wbMODS,
       wbMODF
     ], [], cpNormal, False, nil, True);
 
@@ -6962,8 +7017,8 @@ begin
     wbRStructSK([0], 'Model', [
       wbString(MODL, 'Model Filename', 0, cpNormal, True),
       wbMODT,
-      wbMODS,
       wbMODC,
+      wbMODS,
       wbMODF
     ], [], cpNormal, True, nil, True);
 
@@ -7122,7 +7177,7 @@ begin
     wbFormIDCkNoReach('Owner', [FACT, ACHR, NPC_]),
     wbByteArray('Unknown', 4),
     wbInteger('Flags', itU8, wbFlags(['No Crime'])),
-    wbByteArray('Unknown', 3)
+    wbByteArray('Unused', 3)
   ]);
   wbXRNK := wbInteger(XRNK, 'Owner Faction Rank', itS32);
 
@@ -8422,7 +8477,7 @@ begin
     wbByteArray('Unused', 1),
     wbInteger('Level Max', itU8),
     wbByteArray('Unused', 1),
-    wbInteger('ID', itS16),
+    wbInteger('Addon Index', itS16{, wbOBTEAddonIndexToStr, nil, cpNormal, True, nil, nil, -1}),
     wbInteger('Default', itU8, wbBoolEnum),
     wbArray('Keywords', wbFormIDCk('Keyword', [KYWD, NULL]), -4),
     wbInteger('Min Level For Ranks', itU8),
@@ -8662,6 +8717,7 @@ begin
     wbRStruct('Male world model', [
       wbString(MOD2, 'Model Filename'),
       wbByteArray(MO2T, 'Texture Files Hashes', 0, cpIgnore, false, false, wbNeverShow),
+      wbMODC,
       wbMO2S
     ], []),
     wbString(ICON, 'Male Inventory Image'),
@@ -8669,6 +8725,7 @@ begin
     wbRStruct('Female world model', [
       wbString(MOD4, 'Model Filename'),
       wbByteArray(MO4T, 'Texture Files Hashes', 0, cpIgnore, false, false, wbNeverShow),
+      wbMODC,
       wbMO4S
     ], []),
     wbString(ICO2, 'Female Inventory Image'),
@@ -8740,29 +8797,29 @@ begin
     wbRStruct('Male world model', [
       wbString(MOD2, 'Model Filename'),
       wbByteArray(MO2T, 'Texture Files Hashes', 0, cpIgnore, false, false, wbNeverShow),
-      wbMO2S,
       wbMO2C,
+      wbMO2S,
       wbMO2F
     ], [], cpNormal, False),
     wbRStruct('Female world model', [
       wbString(MOD3, 'Model Filename'),
       wbByteArray(MO3T, 'Texture Files Hashes', 0, cpIgnore, false, false, wbNeverShow),
-      wbMO3S,
       wbMO3C,
+      wbMO3S,
       wbMO3F
     ], []),
     wbRStruct('Male 1st Person', [
       wbString(MOD4, 'Model Filename'),
       wbByteArray(MO4T, 'Texture Files Hashes', 0, cpIgnore, false, false, wbNeverShow),
-      wbMO4S,
       wbMO4C,
+      wbMO4S,
       wbMO4F
     ], []),
     wbRStruct('Female 1st Person', [
       wbString(MOD5, 'Model Filename'),
       wbByteArray(MO5T, 'Texture Files Hashes', 0, cpIgnore, false, false, wbNeverShow),
-      wbMO5S,
       wbMO5C,
+      wbMO5S,
       wbMO5F
     ], []),
     wbFormIDCK(NAM0, 'Male Skin Texture', [TXST, NULL]),
@@ -13761,7 +13818,7 @@ begin
       ], []))
     ], [])),
 
-    wbByteArray(ANAM, 'Aliases Marker', 4),
+    wbInteger(ANAM, 'Next Alias ID', itU32),
 
     wbRArray('Aliases',
       wbRUnion('Alias', [
@@ -15034,7 +15091,8 @@ begin
   wbRecord(TES4, 'Main File Header',
     wbFlags(wbRecordFlagsFlags, wbFlagsList([
       {0x00000001}  0, 'ESM',
-      {0x00000080}  7, 'Localized'
+      {0x00000080}  7, 'Localized',
+      {0x00000200}  9, 'ESL'
     ], False), True), [
     wbStruct(HEDR, 'Header', [
       wbFloat('Version'),
@@ -16454,11 +16512,38 @@ begin
 
   SetLength(wbOfficialDLC, 6);
   wbOfficialDLC[0] := 'DLCRobot.esm';
-  wbOfficialDLC[1] := 'DLCWorkshop01.esm';
+  wbOfficialDLC[1] := 'DLCworkshop01.esm';
   wbOfficialDLC[2] := 'DLCCoast.esm';
-  wbOfficialDLC[3] := 'DLCWorkshop02.esm';
-  wbOfficialDLC[4] := 'DLCWorkshop03.esm';
+  wbOfficialDLC[3] := 'DLCworkshop02.esm';
+  wbOfficialDLC[4] := 'DLCworkshop03.esm';
   wbOfficialDLC[5] := 'DLCNukaWorld.esm';
+
+  SetLength(wbOfficialCC, 0);
+//  wbOfficialDLC[00] := 'ccBGSFO4001-PipBoy(Black).esl';
+//  wbOfficialDLC[01] := 'ccBGSFO4002-PipBoy(Blue).esl';
+//  wbOfficialDLC[02] := 'ccBGSFO4003-PipBoy(Camo01).esl';
+//  wbOfficialDLC[03] := 'ccBGSFO4004-PipBoy(Camo02).esl';
+//  wbOfficialDLC[04] := 'ccBGSFO4006-PipBoy(Chrome).esl';
+//  wbOfficialDLC[05] := 'ccBGSFO4012-PipBoy(Red).esl';
+//  wbOfficialDLC[06] := 'ccBGSFO4014-PipBoy(White).esl';
+//  wbOfficialDLC[07] := 'ccBGSFO4016-Prey.esl';
+//  wbOfficialDLC[08] := 'ccBGSFO4017-Mauler.esl';
+//  wbOfficialDLC[09] := 'ccBGSFO4018-GaussRiflePrototype.esl';
+//  wbOfficialDLC[10] := 'ccBGSFO4019-ChineseStealthArmor.esl';
+//  wbOfficialDLC[11] := 'ccBGSFO4020-PowerArmorSkin(Black).esl';
+//  wbOfficialDLC[12] := 'ccBGSFO4020-PowerArmorSkin(Camo01).esl';
+//  wbOfficialDLC[13] := 'ccBGSFO4020-PowerArmorSkin(Camo02).esl';
+//  wbOfficialDLC[14] := 'ccBGSFO4020-PowerArmorSkin(Chrome).esl';
+//  wbOfficialDLC[15] := 'ccBGSFO4038-HorseArmor.esl';
+//  wbOfficialDLC[16] := 'ccBGSFO4039-TunnelSnakes.esl';
+//  wbOfficialDLC[17] := 'ccBGSFO4041-DoomMarineArmor.esl';
+//  wbOfficialDLC[18] := 'ccBGSFO4042-BFG.esl';
+//  wbOfficialDLC[19] := 'ccBGSFO4043-DoomChainsaw.esl';
+//  wbOfficialDLC[20] := 'ccBGSFO4044-HellfirePowerArmor.esl';
+//  wbOfficialDLC[21] := 'ccFSVFO4001-ModularMilitaryBackpack.esl';
+//  wbOfficialDLC[22] := 'ccFSVFO4002-MidCenturyModern.esl';
+//  wbOfficialDLC[23] := 'ccFRSFO4001-HandmadeShotgun.esl';
+//  wbOfficialDLC[24] := 'ccEEJFO4001-DecorationPack.esl';
 end;
 
 initialization

@@ -40,6 +40,7 @@ threadvar
   wbCurrentAction    : string;
   wbStartTime        : TDateTime;
   wbShowStartTime    : Integer;
+  wbForceTerminate   : Boolean;
 
 var
   wbDisplayLoadOrderFormID : Boolean  = False;
@@ -124,6 +125,11 @@ var
   wbProgramPath        : string;
   wbDataPath           : string;
   wbOutputPath         : string;
+  wbScriptsPath        : string;
+  wbBackupPath         : string;
+  wbTempPath           : string;
+  wbSavePath           : string;
+  wbMyGamesTheGamePath : string;
   wbTheGameIniFileName : string;
 
   wbShouldLoadMOHookFile : Boolean;
@@ -3159,7 +3165,7 @@ var
   wbSourceName  : String;
   wbLanguage    : string;
   wbAutoModes   : TwbSetOfMode = [ tmMasterUpdate, tmMasterRestore, tmLODgen, // Tool modes that run without user interaction until final status
-                    tmESMify, tmESPify, tmSortAndCleanMasters,
+                    tmESMify, tmESPify, tmSortAndCleanMasters, tmScript,
                     tmCheckForErrors, tmCheckForITM, tmCheckForDR ];
   wbPluginModes : TwbSetOfMode = [ tmESMify, tmESPify, tmSortAndCleanMasters,
                                    tmCheckForErrors, tmCheckForITM, tmCheckForDR ];  // Auto modes that require a specific plugin to be provided.
@@ -3264,6 +3270,7 @@ var
   wbPlayerRefID       : Cardinal = $14;
   wbChangedFormOffset : Integer = 10000;
   wbOfficialDLC       : array of string;
+  wbOfficialCC        : array of string;
 
 type
   {$IFDEF WIN32}
@@ -14816,10 +14823,11 @@ initialization
 
   wbProgramPath := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0)));
 
-  SetLength(wbPluginExtensions, 3);
+  SetLength(wbPluginExtensions, 4);
   wbPluginExtensions[0] := '.ESP';
   wbPluginExtensions[1] := '.ESM';
-  wbPluginExtensions[2] := '.GHOST';
+  wbPluginExtensions[2] := '.ESL';
+  wbPluginExtensions[3] := '.GHOST';
 
 finalization
   FreeAndNil(wbIgnoreRecords);

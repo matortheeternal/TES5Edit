@@ -37,6 +37,7 @@ uses
   wbInterface in 'wbInterface.pas',
   wbImplementation in 'wbImplementation.pas',
   wbScriptAdapterMisc in 'wbScriptAdapterMisc.pas',
+  wbScriptAdapterDF in 'wbScriptAdapterDF.pas',
   wbNifScanner in 'wbNifScanner.pas',
   wbStreams in 'wbStreams.pas',
   wbSort in 'wbSort.pas',
@@ -69,6 +70,13 @@ uses
   wbSaveInterface in 'wbSaveInterface.pas',
   Zlibex in 'Zlibex.pas'
   Vectors in 'Vectors.pas';
+  wbDataFormat in 'wbDataFormat.pas',
+  wbDataFormatMisc in 'wbDataFormatMisc.pas',
+  wbDataFormatMaterial in 'wbDataFormatMaterial.pas',
+  wbDataFormatNif in 'wbDataFormatNif.pas',
+  wbDataFormatNifTypes in 'wbDataFormatNifTypes.pas',
+  wbNifMath in 'wbNifMath.pas',
+  wbHalfFloat in 'wbHalfFloat.pas';
 
 {$R *.res}
 {$MAXSTACKSIZE 2097152}

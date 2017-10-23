@@ -50,11 +50,13 @@ var
 	wbFunctionsEnum: IwbEnumDef;
 	wbFurnitureAnimTypeEnum: IwbEnumDef;
 	wbLocationEnum: IwbEnumDef;
+	wbMapMarkerEnum: IwbEnumDef;
 	wbMiscStatEnum: IwbEnumDef;
 	wbMusicEnum: IwbEnumDef;
 	wbObjectTypeEnum: IwbEnumDef;
 	wbPropTypeEnum: IwbEnumDef;
 	wbQuadrantEnum: IwbEnumDef;
+	wbQuestTypeEnum: IwbEnumDef;
 	wbSexEnum: IwbEnumDef;
 	wbSkillEnum: IwbEnumDef;
 	wbSoulGemEnum: IwbEnumDef;
@@ -76,6 +78,7 @@ uses
   SysUtils,
   Math,
   Variants,
+  IOUtils,
   wbHelpers;
 
 const
@@ -2597,6 +2600,11 @@ begin
 
   i := Container.ElementByName['Flags'].NativeValue;
   if i and $00000004 <> 0 then Result := 1;
+end;
+
+function wbDeciderFormVersion44(aBasePtr: Pointer; aEndPtr: Pointer; const aElement: IwbElement): Integer;
+begin
+  Result := wbFormVerDecider(aBasePtr, aEndPtr, aElement, 44);
 end;
 
 
@@ -5349,6 +5357,91 @@ begin
     wbString(ATKE, 'Attack Event')
   ], []);
 
+  wbVMADFragmentedPACK := wbStruct(VMAD, 'Virtual Machine Adapter', [
+    wbInteger('Version', itS16, nil, cpIgnore),
+    wbInteger('Object Format', itS16, nil, cpIgnore),
+    wbArrayS('Scripts', wbScriptEntry, -2, cpNormal, False, nil, nil, nil, False),
+    wbScriptFragmentsPack
+  ], cpNormal, False, nil, 3);
+
+  wbVMADFragmentedQUST := wbStruct(VMAD, 'Virtual Machine Adapter', [
+    wbInteger('Version', itS16, nil, cpIgnore),
+    wbInteger('Object Format', itS16, nil, cpIgnore),
+    wbArrayS('Scripts', wbScriptEntry, -2, cpNormal, False, nil, nil, nil, False),
+    wbScriptFragmentsQuest,
+    wbArrayS('Aliases', wbStructSK([0], 'Alias', [
+      wbScriptPropertyObject,
+      wbInteger('Version', itS16, nil, cpIgnore),
+      wbInteger('Object Format', itS16, nil, cpIgnore),
+	    wbArrayS('Alias Scripts', wbScriptEntry, -2)
+	  ]), -2)
+  ], cpNormal, False, nil, 3);
+
+  wbVMADFragmentedSCEN := wbStruct(VMAD, 'Virtual Machine Adapter', [
+    wbInteger('Version', itS16, nil, cpIgnore),
+    wbInteger('Object Format', itS16, nil, cpIgnore),
+    wbArrayS('Scripts', wbScriptEntry, -2, cpNormal, False, nil, nil, nil, False),
+    wbScriptFragmentsScen
+  ], cpNormal, False, nil, 3);
+
+  wbVMADFragmentedINFO := wbStruct(VMAD, 'Virtual Machine Adapter', [
+    wbInteger('Version', itS16, nil, cpIgnore),
+    wbInteger('Object Format', itS16, nil, cpIgnore),
+    wbArrayS('Scripts', wbScriptEntry, -2, cpNormal, False, nil, nil, nil, False),
+    wbScriptFragmentsInfo
+  ], cpNormal, False, nil, 3);
+
+
+  wbAttackData := wbRStructSK([1], 'Attack', [
+    wbStruct(ATKD, 'Attack Data', [
+      wbFloat('Damage Mult'),
+      wbFloat('Attack Chance'),
+      wbFormIDCk('Attack Spell', [SPEL, SHOU, NULL]),
+      wbInteger('Attack Flags', itU32, wbFlags([
+        {0x00000001} 'Ignore Weapon',
+        {0x00000002} 'Bash Attack',
+        {0x00000004} 'Power Attack',
+        {0x00000008} 'Left Attack',
+        {0x00000010} 'Rotating Attack',
+        {0x00000020} 'Unknown 5',
+        {0x00000040} 'Unknown 6',
+        {0x00000080} 'Unknown 7',
+        {0x00000100} 'Unknown 8',
+        {0x00000200} 'Unknown 9',
+        {0x00000400} 'Unknown 10',
+        {0x00000800} 'Unknown 11',
+        {0x00001000} 'Unknown 12',
+        {0x00002000} 'Unknown 13',
+        {0x00004000} 'Unknown 14',
+        {0x00008000} 'Unknown 15',
+        {0x00010000} 'Unknown 16',
+        {0x00020000} 'Unknown 17',
+        {0x00040000} 'Unknown 18',
+        {0x00080000} 'Unknown 19',
+        {0x00100000} 'Unknown 20',
+        {0x00200000} 'Unknown 21',
+        {0x00400000} 'Unknown 22',
+        {0x00800000} 'Unknown 23',
+        {0x01000000} 'Unknown 24',
+        {0x02000000} 'Unknown 25',
+        {0x04000000} 'Unknown 26',
+        {0x08000000} 'Unknown 27',
+        {0x10000000} 'Unknown 28',
+        {0x20000000} 'Unknown 29',
+        {0x40000000} 'Unknown 30',
+        {0x80000000} 'Override Data'
+      ])),
+      wbFloat('Attack Angle'),
+      wbFloat('Strike Angle'),
+      wbFloat('Stagger'),
+      wbFormIDCk('Attack Type', [KYWD, NULL]),
+      wbFloat('Knockdown'),
+      wbFloat('Recovery Time'),
+      wbFloat('Stamina Mult')
+    ]),
+    wbString(ATKE, 'Attack Event')
+  ], []);
+
   wbPLDT := wbStruct(PLDT, 'Location', [
     wbInteger('Type', itS32, wbLocationEnum),
     wbUnion('Location Value', wbTypeDecider, [
@@ -6633,16 +6726,29 @@ begin
     wbDESC,
     wbKSIZ,
     wbKWDAs,
-    wbStruct(DATA, 'Data', [
-      wbFormIDCk('Projectile', [PROJ, NULL]),
+    IsSSE(
+      wbStruct(DATA, 'Data', [
+        wbFormIDCk('Projectile', [PROJ, NULL]),
         wbInteger('Flags', itU32, wbFlags([
           'Ignores Normal Weapon Resistance',
           'Non-Playable',
           'Non-Bolt'
         ])),
-      wbFloat('Damage'),
-      wbInteger('Value', itU32)
-    ], cpNormal, True),
+        wbFloat('Damage'),
+        wbInteger('Value', itU32),
+        wbFloat('Weight')
+      ], cpNormal, True, nil, 4),
+      wbStruct(DATA, 'Data', [
+        wbFormIDCk('Projectile', [PROJ, NULL]),
+        wbInteger('Flags', itU32, wbFlags([
+          'Ignores Normal Weapon Resistance',
+          'Non-Playable',
+          'Non-Bolt'
+        ])),
+        wbFloat('Damage'),
+        wbInteger('Value', itU32)
+      ], cpNormal, True)
+    ),
     wbString(ONAM, 'Short Name')
   ], False, nil, cpNormal, False, wbRemoveEmptyKWDA, wbKeywordsAfterSet);
 
@@ -9110,7 +9216,99 @@ end;
 procedure DefineTES5i;
 var
   a, b, c : TVarRecs;
+  s: string;
 begin
+  // load map markes list from external file if present
+  s := ExtractFilePath(ParamStr(0)) + wbAppName + 'MapMarkers.txt';
+  if FileExists(s) then try
+    wbMapMarkerEnum := wbEnum(TFile.ReadAllLines(s));
+  except end;
+
+  if not Assigned(wbMapMarkerEnum) then
+    wbMapMarkerEnum := wbEnum([
+      { 0} 'None',
+      { 1} 'City',
+      { 2} 'Town',
+      { 3} 'Settlement',
+      { 4} 'Cave',
+      { 5} 'Camp',
+      { 6} 'Fort',
+      { 7} 'Nordic Ruins',
+      { 8} 'Dwemer Ruin',
+      { 9} 'Shipwreck',
+      {10} 'Grove',
+      {11} 'Landmark',
+      {12} 'Dragon Lair',
+      {13} 'Farm',
+      {14} 'Wood Mill',
+      {15} 'Mine',
+      {16} 'Imperial Camp',
+      {17} 'Stormcloak Camp',
+      {18} 'Doomstone',
+      {19} 'Wheat Mill',
+      {20} 'Smelter',
+      {21} 'Stable',
+      {22} 'Imperial Tower',
+      {23} 'Clearing',
+      {24} 'Pass',
+      {25} 'Altar',
+      {26} 'Rock',
+      {27} 'Lighthouse',
+      {28} 'Orc Stronghold',
+      {29} 'Giant Camp',
+      {30} 'Shack',
+      {31} 'Nordic Tower',
+      {32} 'Nordic Dwelling',
+      {33} 'Docks',
+      {34} 'Shrine',
+      {35} 'Riften Castle',
+      {36} 'Riften Capitol',
+      {37} 'Windhelm Castle',
+      {38} 'Windhelm Capitol',
+      {39} 'Whiterun Castle',
+      {40} 'Whiterun Capitol',
+      {41} 'Solitude Castle',
+      {42} 'Solitude Capitol',
+      {43} 'Markarth Castle',
+      {44} 'Markarth Capitol',
+      {45} 'Winterhold Castle',
+      {46} 'Winterhold Capitol',
+      {47} 'Morthal Castle',
+      {48} 'Morthal Capitol',
+      {49} 'Falkreath Castle',
+      {50} 'Falkreath Capitol',
+      {51} 'Dawnstar Castle',
+      {52} 'Dawnstar Capitol',
+      {53} 'DLC02 - Temple of Miraak',
+      {54} 'DLC02 - Raven Rock',
+      {55} 'DLC02 - Beast Stone',
+      {56} 'DLC02 - Tel Mithryn',
+      {57} 'DLC02 - To Skyrim',
+      {58} 'DLC02 - To Solstheim'
+    ]);
+
+  // load quest types list from external file if present
+  s := ExtractFilePath(ParamStr(0)) + wbAppName + 'QuestTypes.txt';
+  if FileExists(s) then try
+    wbQuestTypeEnum := wbEnum(TFile.ReadAllLines(s));
+  except end;
+
+  if not Assigned(wbQuestTypeEnum) then
+    wbQuestTypeEnum := wbEnum([
+      {0} 'None',
+      {1} 'Main Quest',
+      {2} 'Mages'' Guild',
+      {3} 'Thieves'' Guild',
+      {4} 'Dark Brotherhood',
+      {5} 'Companion Quests',
+      {6} 'Miscellaneous',
+      {7} 'Daedric',
+      {8} 'Side Quest',
+      {9} 'Civil War',
+     {10} 'DLC01 - Vampire',
+     {11} 'DLC02 - Dragonborn'
+    ]);
+
   wbRecord(MESG, 'Message', [
     wbEDID,
     wbDESCReq,
@@ -9485,7 +9683,24 @@ begin
           Sig2Int('AHNC'), 'Keyword - Armor Material Heavy Nordic',
           Sig2Int('AHSM'), 'Keyword - Armor Material Heavy Stalhrim',
           Sig2Int('WPNC'), 'Keyword - Weapon Material Nordic',
-          Sig2Int('WPSM'), 'Keyword - Weapon Material Stalhrim'
+          Sig2Int('WPSM'), 'Keyword - Weapon Material Stalhrim',
+          Sig2Int('SKAB'), 'Survival - Keyword Armor Body',
+          Sig2Int('SKAF'), 'Survival - Keyword Armor Feet',
+          Sig2Int('SKAH'), 'Survival - Keyword Armor Hands',
+          Sig2Int('SKAO'), 'Survival - Keyword Armor Head',
+          Sig2Int('SKCB'), 'Survival - Keyword Clothing Body',
+          Sig2Int('SKCD'), 'Survival - Keyword Cold',
+          Sig2Int('SKCF'), 'Survival - Keyword Clothing Feet',
+          Sig2Int('SKCH'), 'Survival - Keyword Clothing Hands',
+          Sig2Int('SKCO'), 'Survival - Keyword Clothing Head',
+          Sig2Int('SKWM'), 'Survival - Keyword Warm',
+          Sig2Int('SRCP'), 'Survival - Cold Penalty',
+          Sig2Int('SRHP'), 'Survival - Hunger Penalty',
+          Sig2Int('SRSP'), 'Survival - Sleep Penalty',
+          Sig2Int('SRTP'), 'Survival - Temperature',
+          Sig2Int('SRVE'), 'Survival Mode Enabled',
+          Sig2Int('SRVS'), 'Survival Mode - Show Option',
+          Sig2Int('SRVT'), 'Survival Mode - Toggle'
         ]);
 
   c := CombineVarRecs(a, b);
@@ -10694,8 +10909,8 @@ begin
         wbFloat('Scale')
       ]),
       wbFormIDCk('Enchant Art', [ARTO, NULL]),
-      wbByteArray('Unknown', 4),
-      wbByteArray('Unknown', 4),
+      wbFormID('Unknown'),  // BGSReferenceEffect
+      wbFormID('Unknown'),  // BGSReferenceEffect
       wbFormIDCk('Equip Ability', [SPEL, NULL]),
       wbFormIDCk('Image Space Modifier', [IMAD, NULL]),
       wbFormIDCk('Perk to Apply', [PERK, NULL]),
@@ -11328,20 +11543,7 @@ begin
       wbInteger('Priority', itU8),
       wbInteger('Form Version', itU8, nil, cpIgnore),
       wbByteArray('Unknown', 4),
-      wbInteger('Type', itU32, wbEnum([
-        {0} 'None',
-        {1} 'Main Quest',
-        {2} 'Mages'' Guild',
-        {3} 'Thieves'' Guild',
-        {4} 'Dark Brotherhood',
-        {5} 'Companion Quests',
-        {6} 'Miscellaneous',
-        {7} 'Daedric',
-        {8} 'Side Quest',
-        {9} 'Civil War',
-       {10} 'DLC01 - Vampire',
-       {11} 'DLC02 - Dragonborn'
-      ]))
+      wbInteger('Type', itU32, wbQuestTypeEnum)
     ]),
     wbString(ENAM, 'Event', 4),
     wbRArray('Text Display Globals', wbFormIDCk(QTGL, 'Global', [GLOB])),
@@ -11390,7 +11592,7 @@ begin
         wbCTDAs
       ], []))
     ], [])),
-    wbByteArray(ANAM, 'Aliases Marker', 4),
+    wbInteger(ANAM, 'Next Alias ID', itU32),
     wbRArray('Aliases',
       wbRUnion('Alias', [
 
@@ -12411,108 +12613,7 @@ begin
       ]), cpNormal, True),
       wbFULLReq,
       wbStruct(TNAM, '', [
-        wbInteger('Type', itU8, wbEnum([], [
-          0, 'None',
-          1, 'City',
-          2, 'Town',
-          3, 'Settlement',
-          4, 'Cave',
-          5, 'Camp',
-          6, 'Fort',
-          7, 'Nordic Ruins',
-          8, 'Dwemer Ruin',
-          9, 'Shipwreck',
-          10, 'Grove',
-          11, 'Landmark',
-          12, 'Dragon Lair',
-          13, 'Farm',
-          14, 'Wood Mill',
-          15, 'Mine',
-          16, 'Imperial Camp',
-          17, 'Stormcloak Camp',
-          18, 'Doomstone',
-          19, 'Wheat Mill',
-          20, 'Smelter',
-          21, 'Stable',
-          22, 'Imperial Tower',
-          23, 'Clearing',
-          24, 'Pass',
-          25, 'Altar',
-          26, 'Rock',
-          27, 'Lighthouse',
-          28, 'Orc Stronghold',
-          29, 'Giant Camp',
-          30, 'Shack',
-          31, 'Nordic Tower',
-          32, 'Nordic Dwelling',
-          33, 'Docks',
-          34, 'Shrine',
-          35, 'Riften Castle',
-          36, 'Riften Capitol',
-          37, 'Windhelm Castle',
-          38, 'Windhelm Capitol',
-          39, 'Whiterun Castle',
-          40, 'Whiterun Capitol',
-          41, 'Solitude Castle',
-          42, 'Solitude Capitol',
-          43, 'Markarth Castle',
-          44, 'Markarth Capitol',
-          45, 'Winterhold Castle',
-          46, 'Winterhold Capitol',
-          47, 'Morthal Castle',
-          48, 'Morthal Capitol',
-          49, 'Falkreath Castle',
-          50, 'Falkreath Capitol',
-          51, 'Dawnstar Castle',
-          52, 'Dawnstar Capitol',
-          53, 'DLC02 - Temple of Miraak',
-          54, 'DLC02 - Raven Rock',
-          55, 'DLC02 - Beast Stone',
-          56, 'DLC02 - Tel Mithryn',
-          57, 'DLC02 - To Skyrim',
-          58, 'DLC02 - To Solstheim',
-          59, 'Custom 59',
-          60, 'Custom 60',
-          61, 'Custom 61',
-          62, 'Custom 62',
-          63, 'Custom 63',
-          64, 'Custom 64',
-          65, 'Custom 65',
-          66, 'Custom 66',
-          67, 'Custom 67',
-          68, 'Custom 68',
-          69, 'Custom 69',
-          70, 'Custom 70',
-          71, 'Custom 71',
-          72, 'Custom 72',
-          73, 'Custom 73',
-          74, 'Custom 74',
-          75, 'Custom 75',
-          76, 'Custom 76',
-          77, 'Custom 77',
-          78, 'Custom 78',
-          79, 'Custom 79',
-          80, 'Custom 80',
-          81, 'Custom 81',
-          82, 'Custom 82',
-          83, 'Custom 83',
-          84, 'Custom 84',
-          85, 'Custom 85',
-          86, 'Custom 86',
-          87, 'Custom 87',
-          88, 'Custom 88',
-          89, 'Custom 89',
-          90, 'Custom 90',
-          91, 'Custom 91',
-          92, 'Custom 92',
-          93, 'Custom 93',
-          94, 'Custom 94',
-          95, 'Custom 95',
-          96, 'Custom 96',
-          97, 'Custom 97',
-          98, 'Custom 98',
-          99, 'Custom 99'
-        ])),
+        wbInteger('Type', itU8, wbMapMarkerEnum),
         wbByteArray('Unused', 1)
       ], cpNormal, True)
     ], []),
@@ -12813,7 +12914,8 @@ begin
   wbRecord(TES4, 'Main File Header',
     wbFlags(wbRecordFlagsFlags, wbFlagsList([
       {0x00000001}  0, 'ESM',
-      {0x00000080}  7, 'Localized'
+      {0x00000080}  7, 'Localized',
+      {0x00000200}  9, IsSSE('ESL', '')
     ], False), True), [
     wbStruct(HEDR, 'Header', [
       wbFloat('Version'),

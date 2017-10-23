@@ -23,6 +23,7 @@ uses
   Windows,
   SysUtils,
   Graphics,
+  Forms,
   ShellAPI,
   ShlObj,
   IniFiles,
@@ -88,6 +89,7 @@ function wbGetSiblingRecords(const aElement: IwbElement; aSignatures: TwbSignatu
 function FindMatchText(Strings: TStrings; const Str: string): Integer;
 function IsFileESM(const aFileName: string): Boolean;
 function IsFileESP(const aFileName: string): Boolean;
+function IsFileESL(const aFileName: string): Boolean;
 procedure DeleteDirectory(const DirName: string);
 function FullPathToFilename(aString: string): string;
 procedure wbFlipBitmap(aBitmap: TBitmap; MirrorType: Integer); // MirrorType: 1 - horizontal, 2 - vertical, 0 - both
@@ -106,6 +108,8 @@ function wbMD5Data(aData: TBytes): string;
 function wbMD5File(aFileName: string): string;
 function wbIsAssociatedWithExtension(aExt: string): Boolean;
 function wbAssociateWithExtension(aExt, aName, aDescr: string): Boolean;
+function ExecuteCaptureConsoleOutput(const aCommandLine: string): Cardinal;
+
 
 type
   PnxLeveledListCheckCircularStack = ^TnxLeveledListCheckCircularStack;
@@ -412,6 +416,14 @@ const
 begin
   Result := SameText(ExtractFileExt(aFileName), '.esp') or
     SameText(Copy(aFileName, Length(aFileName) - Length(ghostesp) + 1, Length(ghostesp)), ghostesp)
+end;
+
+function IsFileESL(const aFileName: string): Boolean;
+const
+  ghostesl = '.esl.ghost';
+begin
+  Result := SameText(ExtractFileExt(aFileName), '.esl') or
+    SameText(Copy(aFileName, Length(aFileName) - Length(ghostesl) + 1, Length(ghostesl)), ghostesl)
 end;
 
 procedure DeleteDirectory(const DirName: string);
@@ -1217,6 +1229,86 @@ function wbFormVer78Decider(aBasePtr: Pointer; aEndPtr: Pointer; const aElement:
 begin
   Result := wbFormVerDecider(aBasePtr, aEndPtr, aElement, 78);
 end;
+
+function ExecuteCaptureConsoleOutput(const aCommandLine: string): Cardinal;
+type
+  OemString = type AnsiString(CP_OEMCP);
+const
+  CReadBuffer = 4096;
+var
+  saSecurity: TSecurityAttributes;
+  hRead: THandle;
+  hWrite: THandle;
+  suiStartup: TStartupInfo;
+  piProcess: TProcessInformation;
+  pBuffer: array [0..CReadBuffer] of AnsiChar;
+  dBuffer: array [0..CReadBuffer] of Char;
+  pCmdLine: array [0..MAX_PATH] of Char;
+  dRead, dRunning, dw: DWord;
+  s: string;
+begin
+  saSecurity.nLength := SizeOf(TSecurityAttributes);
+  saSecurity.bInheritHandle := True;
+  saSecurity.lpSecurityDescriptor := nil;
+
+  if CreatePipe(hRead, hWrite, @saSecurity, 0) then begin
+    try
+      FillChar(suiStartup, SizeOf(TStartupInfo), #0);
+      suiStartup.cb := SizeOf(TStartupInfo);
+      suiStartup.hStdInput := hRead;
+      suiStartup.hStdOutput := hWrite;
+      suiStartup.hStdError := hWrite;
+      suiStartup.dwFlags := STARTF_USESTDHANDLES or STARTF_USESHOWWINDOW;
+      suiStartup.wShowWindow := SW_HIDE;
+
+      StrPCopy(pCmdLine, aCommandLine);
+      if CreateProcess(nil, pCmdLine, @saSecurity, @saSecurity, True, NORMAL_PRIORITY_CLASS, nil, nil, suiStartup, piProcess) then begin
+        try
+          repeat
+            dRunning := WaitForSingleObject(piProcess.hProcess, 100);
+            Application.ProcessMessages;
+
+            if wbForceTerminate or (GetKeyState(VK_ESCAPE) and 128 = 128) then begin
+              dw := Integer(TerminateProcess(piProcess.hProcess, 1));
+              if dw <> 0 then begin
+                dw := WaitForSingleObject(piProcess.hProcess, 1000);
+                if dw = WAIT_FAILED then
+                  Result := GetLastError;
+              end else
+                Result := GetLastError;
+
+              wbProgressCallback('Interrupted by user!');
+              Exit;
+            end;
+
+            if PeekNamedPipe(hRead, nil, 0, nil, @dRead, nil) then begin
+              if dRead > 0 then repeat
+                dRead := 0;
+                ReadFile(hRead, pBuffer[0], CReadBuffer, dRead, nil);
+                pBuffer[dRead] := #0;
+                OemToChar(pBuffer, dBuffer);
+                s := Trim(string(Oemstring(pBuffer)));
+                if s <> '' then
+                  wbProgressCallback(s);
+              until dRead < CReadBuffer;
+            end;
+          until dRunning <> WAIT_TIMEOUT;
+          GetExitCodeProcess(piProcess.hProcess, Result);
+        finally
+          CloseHandle(piProcess.hProcess);
+          CloseHandle(piProcess.hThread);
+        end;
+      end else
+        RaiseLastOSError;
+
+    finally
+      CloseHandle(hRead);
+      CloseHandle(hWrite);
+    end;
+  end else
+    RaiseLastOSError;
+end;
+
 
 initialization
   CRCInit;
