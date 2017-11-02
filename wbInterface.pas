@@ -412,7 +412,8 @@ type
     esDestroying,
     esChangeNotified,
     esModifiedUpdated,
-    esSorting
+    esSorting,
+    esFilterHidden
   );
 
   TwbElementStates = set of TwbElementState;
@@ -502,6 +503,7 @@ type
 
     procedure Hide;
     procedure Show;
+    procedure Filter(show: Boolean);
     function GetIsHidden: Boolean;
 
     procedure MoveUp;
