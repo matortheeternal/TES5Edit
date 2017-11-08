@@ -13108,9 +13108,9 @@ end;
 procedure TwbElement.Filter(show: Boolean);
 begin
   if show then
-    Exclude(eStates, esFilterHidden)
+    Include(eStates, esFilterShow)
   else
-    Include(eStates, esFilterHidden);
+    Exclude(eStates, esFilterShow);
 end;
 
 procedure TwbElement.InformStorage(var aBasePtr: Pointer; aEndPtr: Pointer);
