@@ -564,7 +564,7 @@ var
   wbCTDAs: IwbSubRecordArrayDef;
   wbCTDAsReq: IwbSubRecordArrayDef;
   wbSCROs: IwbSubRecordArrayDef;
-  wbPGRP: IwbSubRecordDef;
+//  wbPGRP: IwbSubRecordDef;
   wbEmbeddedScript: IwbSubRecordStructDef;
   wbEmbeddedScriptPerk: IwbSubRecordStructDef;
   wbEmbeddedScriptReq: IwbSubRecordStructDef;
@@ -573,7 +573,7 @@ var
   wbFaceGen: IwbSubRecordStructDef;
   wbFaceGenNPC: IwbSubRecordStructDef;
   wbENAM: IwbSubRecordDef;
-  wbFGGS: IwbSubRecordDef;
+//  wbFGGS: IwbSubRecordDef;
   wbXLOD: IwbSubRecordDef;
   wbXESP: IwbSubRecordDef;
   wbICON: IwbSubRecordStructDef;
@@ -724,6 +724,8 @@ begin
   if Assigned(BaseRecord) then
     MainRecord := BaseRecord;
 
+  MainRecord := MainRecord.WinningOverride;
+
   ScriptRef := MainRecord.RecordBySignature['SCRI'];
 
   if not Assigned(ScriptRef) then begin
@@ -821,6 +823,8 @@ begin
   BaseRecord := MainRecord.BaseRecord;
   if Assigned(BaseRecord) then
     MainRecord := BaseRecord;
+
+  MainRecord := MainRecord.WinningOverride;
 
   ScriptRef := MainRecord.RecordBySignature['SCRI'];
 
@@ -4438,7 +4442,7 @@ begin
     ], [], cpNormal, True, nil, True);
 
 
-  wbDEST := wbRStruct('Destructable', [
+  wbDEST := wbRStruct('Destructible', [
     wbStruct(DEST, 'Header', [
       wbInteger('Health', itS32),
       wbInteger('Count', itU8),
@@ -4475,7 +4479,7 @@ begin
     )
   ], []);
 
-  wbDESTActor := wbRStruct('Destructable', [
+  wbDESTActor := wbRStruct('Destructible', [
     wbStruct(DEST, 'Header', [
       wbInteger('Health', itS32),
       wbInteger('Count', itU8),

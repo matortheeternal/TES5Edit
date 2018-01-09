@@ -2678,7 +2678,7 @@ type
 
 const
   {>> N means New, V means verified that the name has not changed <<<}
-  wbCTDAFunctions : array[0..399] of TCTDAFunction = (
+  wbCTDAFunctions : array[0..401] of TCTDAFunction = (
 {N} (Index:   0; Name: 'GetWantBlocking'),
 {V} (Index:   1; Name: 'GetDistance'; ParamType1: ptObjectReference),
 {V} (Index:   5; Name: 'GetLocked'),
@@ -3074,6 +3074,8 @@ const
 {N} (Index: 731; Name: 'CanFlyHere'),
 {N} (Index: 732; Name: 'IsFlyingMountPatrolQueud'),
 {N} (Index: 733; Name: 'IsFlyingMountFastTravelling'),
+{N} (Index: 734; Name: 'IsOverEncumbered'),
+{N} (Index: 735; Name: 'GetActorWarmth'),
 
     // Added by SKSE
     (Index: 1024; Name: 'GetSKSEVersion'; ),
@@ -5616,7 +5618,7 @@ begin
     ]),
   -1);
 
-  wbDEST := wbRStruct('Destructable', [
+  wbDEST := wbRStruct('Destructible', [
     wbStruct(DEST, 'Header', [
       wbInteger('Health', itS32),
       wbInteger('DEST Count', itU8),
@@ -5650,7 +5652,7 @@ begin
     )
   ], [], cpNormal, False, nil);
 
-  wbDESTActor := wbRStruct('Destructable', [
+  wbDESTActor := wbRStruct('Destructible', [
     wbStruct(DEST, 'Header', [
       wbInteger('Health', itS32),
       wbInteger('Count', itU8),
@@ -8203,7 +8205,7 @@ begin
         {0x08} 'Inherit Radius from Spawn Spell',
         {0x10} 'Drop to Ground'
       ])),
-      wbFormIDCk('Spell', [SPEL, NULL]),
+      wbFormIDCk('Spell', [SPEL, ENCH, NULL]),
       wbFormIDCk('Light', [LIGH, NULL]),
       wbFormIDCk('Impact Data Set', [IPDS, NULL]),
       wbFormIDCk('Sound', [SNDR, NULL])
@@ -9918,7 +9920,7 @@ begin
         'Ally',
         'Confidant',
         'Friend',
-        'Acquaitance',
+        'Acquaintance',
         'Rival',
         'Foe',
         'Enemy',
@@ -13761,6 +13763,8 @@ begin
     wbOfficialDLC[0] := 'Dawnguard.esm';
     wbOfficialDLC[1] := 'HearthFires.esm';
     wbOfficialDLC[2] := 'Dragonborn.esm';
+
+    wbCreationClubContentFileName := 'Skyrim.ccc';
   end;
 
 end;

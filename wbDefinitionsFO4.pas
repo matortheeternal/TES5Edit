@@ -1029,6 +1029,7 @@ var
   wbCUSD: IwbSubRecordDef;
   wbINRD: IwbSubRecordDef;
   wbPTRN: IwbSubRecordDef;
+  wbSTCP: IwbSubRecordDef;
   wbNTRM: IwbSubRecordDef;
   wbPRPS: IwbSubRecordDef;
   wbFLTR: IwbSubRecordDef;
@@ -4495,7 +4496,6 @@ begin
         Container.ElementNativeValues['XLOC - Lock Data\Level'] := 1;
     end;
 
-    Container.RemoveElement('XPTL');
   finally
     wbEndInternalEdit;
   end;
@@ -8236,6 +8236,7 @@ begin
   wbICON := wbString(ICON, 'Inventory Image');
   wbMICO := wbString(MICO, 'Message Icon');
   wbPTRN := wbFormIDCk(PTRN, 'Preview Transform', [TRNS]);
+  wbSTCP := wbFormIDCk(STCP, 'Animation Sound', [STAG]);
   wbNTRM := wbFormIDCk(NTRM, 'Native Terminal', [TERM]);
   wbYNAM := wbFormIDCk(YNAM, 'Sound - Pick Up', [SNDR]);
   wbZNAM := wbFormIDCk(ZNAM, 'Sound - Put Down', [SNDR]);
@@ -8248,7 +8249,7 @@ begin
   wbFLTR := wbString(FLTR, 'Filter');
   wbAPPR := wbArray(APPR, 'Attach Parent Slots', wbFormIDCk('Keyword', [KYWD]));
   wbFTYP := wbFormIDCk(FTYP, 'Forced Loc Ref Type', [LCRT]);
-  wbATTX := wbLString(ATTX, 'Activate Text Override', 0, cpTranslate);
+  wbATTX := wbLStringKC(ATTX, 'Activate Text Override', 0, cpTranslate);
 
   wbMNAMFurnitureMarker := wbInteger(MNAM, 'Active Markers / Flags', itU32, wbFlags([
     {0x00000001} 'Interaction Point 0',
@@ -8548,7 +8549,7 @@ begin
     wbVMAD,
     wbOBNDReq,
     wbPTRN,
-    wbFormIDCk(STCP, 'Sound', [STAG]),
+    wbSTCP,
     wbFULL,
     wbMODL,
     wbDEST,
@@ -8653,7 +8654,7 @@ begin
       wbFloat('Addiction Chance'),
       wbFormIDCk('Sound - Consume', [SNDR, NULL])
     ], cpNormal, True),
-    wbLString(DNAM, 'Addiction Name', 0, cpTranslate),
+    wbLStringKC(DNAM, 'Addiction Name', 0, cpTranslate),
     wbEffectsReq
   ], False, nil, cpNormal, False, wbRemoveEmptyKWDA, wbKeywordsAfterSet);
 
@@ -8871,7 +8872,7 @@ begin
         wbInteger('Y', itU32)
       ])
     ], cpNormal, True),
-    wbLString(CNAM, 'Description', 0, cpTranslate),
+    wbLStringKC(CNAM, 'Description', 0, cpTranslate),
     wbFormIDCk(INAM, 'Inventory Art', [STAT])
   ], False, nil, cpNormal, False, nil, wbKeywordsAfterSet);
 end;
@@ -11369,9 +11370,9 @@ begin
     ]), cpNormal, True, False, nil, wbMESGDNAMAfterSet),
     wbInteger(TNAM, 'Display Time', itU32, nil, cpNormal, False, False, wbMESGTNAMDontShow),
     wbString(SNAM, 'SWF'),
-    wbLString(NNAM, 'Short Title', 0, cpTranslate),
+    wbLStringKC(NNAM, 'Short Title', 0, cpTranslate),
     wbRStructs('Menu Buttons', 'Menu Button', [
-      wbLString(ITXT, 'Button Text', 0, cpTranslate),
+      wbLStringKC(ITXT, 'Button Text', 0, cpTranslate),
       wbCTDAs
     ], [])
   ], False, nil, cpNormal, False, wbMESGAfterLoad);
@@ -11989,7 +11990,7 @@ begin
         'Ally',
         'Confidant',
         'Friend',
-        'Acquaitance',
+        'Acquaintance',
         'Rival',
         'Foe',
         'Enemy',
@@ -12595,11 +12596,11 @@ begin
     ], [])),
 
     wbCTDAs,
-    wbLString(RNAM, 'Prompt', 0, cpTranslate),
+    wbLStringKC(RNAM, 'Prompt', 0, cpTranslate),
     wbFormIDCk(ANAM, 'Speaker', [NPC_]),
     wbFormIDCk(TSCE, 'Start Scene', [SCEN]),
-    wbInteger(ALFA, 'Forced Alias', itS32),
     wbUnknown(INTV),
+    wbInteger(ALFA, 'Forced Alias', itS32),
     wbFormIDCk(ONAM, 'Audio Output Override', [SOPM]),
     wbInteger(GREE, 'Greet Distance', itU32),
     wbStruct(TIQS, 'Set Parent Quest Stage', [
@@ -13200,7 +13201,7 @@ begin
     wbVMAD,
     wbOBNDReq,
     wbPTRN,
-    wbFormIDCk(STCP, 'Unknown', [STAG]),
+    wbSTCP,
     wbStruct(ACBS, 'Configuration', [
       wbInteger('Flags', itU32, wbFlags([
         {0x00000001} 'Female',
@@ -13322,7 +13323,7 @@ begin
     wbObjectTemplate,
     wbFormIDCk(CNAM, 'Class', [CLAS], False, cpNormal, True),
     wbFULL,
-    wbLString(SHRT, 'Short Name', 0, cpTranslate),
+    wbLStringKC(SHRT, 'Short Name', 0, cpTranslate),
     wbByteArray(DATA, 'Marker'),
     wbStruct(DNAM, '', [
       wbInteger('Unknown', itU16),
@@ -13519,7 +13520,7 @@ procedure DefineFO4n;
             cpNormal, False, nil, wbMorphPresetsAfterSet
           ),
           wbUnknown(MPPK),
-          wbUnknown(MPGS)
+          wbArray(MPGS, 'Unknown', wbInteger('Index', itU32, wbIntToHexStr, wbHexStrToInt))
         ], [])
       );
   end;
@@ -13793,7 +13794,7 @@ begin
         ])),
         wbCTDAs,
         wbString(NAM2, 'Note'),
-        wbLString(CNAM, 'Log Entry', 0, cpTranslate),
+        wbLStringKC(CNAM, 'Log Entry', 0, cpTranslate),
         wbFormIDCk(NAM0, 'Next Quest', [QUST])
       ], []))
     ], [])),
@@ -13803,7 +13804,7 @@ begin
         {0x01} 'ORed With Previous',
         {0x02} 'No Stats Tracking'
       ])),
-      wbLString(NNAM, 'Display Text', 0, cpTranslate, True),
+      wbLStringKC(NNAM, 'Display Text', 0, cpTranslate, True),
       wbRArray('Targets', wbRStruct('Target', [
         wbStruct(QSTA, 'Target', [
           wbInteger('Alias', itS32, wbQuestAliasToStr, wbStrToAlias),
@@ -14027,7 +14028,7 @@ begin
       {0x00080000} 19, 'Unknown 19'
     ])), [
     wbEDID,
-    wbFormIDCk(STCP, 'Sound', [STAG]),
+    wbSTCP,
     wbFULL,
     wbDESCReq,
     wbSPCT,
@@ -14302,7 +14303,7 @@ begin
         wbString(MSM1, 'Max Name')
       ], [])
     ),
-    wbUnknown(MLSI),
+    wbInteger(MLSI, 'Morph Last Index', itU32, wbIntToHexStr, wbHexStrToInt),
     wbString(HNAM, 'Hair Color Lookup Texture'),
     wbString(HLTX, 'Hair Color Extended Lookup Texture'),
     wbFormIDCk(QSTI, 'Dialogue Quest', [QUST]),
@@ -14446,6 +14447,25 @@ begin
       wbFormIDCk('Origin', [REFR, NULL]),
       wbFormIDCk('Destination', [REFR, NULL])
     ])),
+
+    // not seen in FO4 vanilla files, but can be added in CK
+    wbStruct(XPTL, 'Room Portal', [
+      wbStruct('Size', [
+        wbFloat('Width', cpNormal, False, 2),
+        wbFloat('Height', cpNormal, False, 2)
+      ]),
+      wbStruct('Position', [
+        wbFloat('X'),
+        wbFloat('Y'),
+        wbFloat('Z')
+      ]),
+      wbStruct('Rotation (Quaternion?)', [
+        wbFloat('q1'),
+        wbFloat('q2'),
+        wbFloat('q3'),
+        wbFloat('q4')
+      ])
+    ]),
 
     wbUnknown(XORD),
 
@@ -15171,7 +15191,7 @@ begin
     wbPRPS,
     wbUnknown(PNAM),
     wbATTX,
-    wbLString(RNAM, 'Activate Text Override', 0, cpTranslate),
+    wbLStringKC(RNAM, 'Activate Text Override', 0, cpTranslate),
     wbUnknown(FNAM),
     wbFormIDCk(PFIG, 'Ingredient', sigBaseObjects),
     wbFormIDCK(SNAM, 'Harvest Sound', [SNDR]),
@@ -15288,6 +15308,7 @@ begin
     wbVMAD,
     wbOBNDReq,
     wbPTRN,
+    wbSTCP,
     wbFULL,
     wbMODL,
     wbICON,
@@ -15893,7 +15914,7 @@ begin
         // should not be sorted
         wbRArray('Names',
           wbRStruct('Name', [
-            wbLString(WNAM, 'Text', 0, cpTranslate),
+            wbLStringKC(WNAM, 'Text', 0, cpTranslate),
             wbKSIZ,
             wbKWDAs,
             wbStruct(XNAM, 'Property', [
@@ -16215,8 +16236,8 @@ begin
     wbVMADFragmentedPERK, // same fragments format as in PERK
     wbOBNDReq,
     wbPTRN,
-    wbLString(NAM0, 'Header Text'),
-    wbLString(WNAM, 'Welcome Text'),
+    wbLStringKC(NAM0, 'Header Text'),
+    wbLStringKC(WNAM, 'Welcome Text'),
     wbFULL,
     wbMODL,
     wbKSIZ,
@@ -16240,7 +16261,7 @@ begin
     wbInteger(BSIZ, 'Count', itU32, nil, cpBenign),
     wbRArray('Body Text',
       wbRStruct('Item', [
-        wbLString(BTXT, 'Text', 0, cpTranslate),
+        wbLStringKC(BTXT, 'Text', 0, cpTranslate),
         wbCTDAs
       ], []),
       cpNormal, False, nil, wbTERMDisplayItemsAfterSet
@@ -16248,8 +16269,8 @@ begin
     wbInteger(ISIZ, 'Count', itU32, nil, cpBenign),
     wbRArray('Menu Items',
       wbRStruct('Menu Item', [
-        wbLString(ITXT, 'Item Text', 0, cpTranslate),
-        wbLString(RNAM, 'Response Text', 0, cpTranslate),
+        wbLStringKC(ITXT, 'Item Text', 0, cpTranslate),
+        wbLStringKC(RNAM, 'Response Text', 0, cpTranslate),
         wbInteger(ANAM, 'Type', itU8, wbEnum([
           {0} 'Unknown 0',
           {1} 'Unknown 1',
@@ -16262,7 +16283,7 @@ begin
           {8} 'Display Text'
         ]), cpNormal, True),
         wbInteger(ITID, 'Item ID', itU16),
-        wbLString(UNAM, 'Display Text', 0, cpTranslate),
+        wbLStringKC(UNAM, 'Display Text', 0, cpTranslate),
         wbString(VNAM, 'Show Image'),
         wbFormIDCk(TNAM, 'Submenu', [TERM]),
         wbCTDAs
@@ -16518,32 +16539,7 @@ begin
   wbOfficialDLC[4] := 'DLCworkshop03.esm';
   wbOfficialDLC[5] := 'DLCNukaWorld.esm';
 
-  SetLength(wbOfficialCC, 0);
-//  wbOfficialDLC[00] := 'ccBGSFO4001-PipBoy(Black).esl';
-//  wbOfficialDLC[01] := 'ccBGSFO4002-PipBoy(Blue).esl';
-//  wbOfficialDLC[02] := 'ccBGSFO4003-PipBoy(Camo01).esl';
-//  wbOfficialDLC[03] := 'ccBGSFO4004-PipBoy(Camo02).esl';
-//  wbOfficialDLC[04] := 'ccBGSFO4006-PipBoy(Chrome).esl';
-//  wbOfficialDLC[05] := 'ccBGSFO4012-PipBoy(Red).esl';
-//  wbOfficialDLC[06] := 'ccBGSFO4014-PipBoy(White).esl';
-//  wbOfficialDLC[07] := 'ccBGSFO4016-Prey.esl';
-//  wbOfficialDLC[08] := 'ccBGSFO4017-Mauler.esl';
-//  wbOfficialDLC[09] := 'ccBGSFO4018-GaussRiflePrototype.esl';
-//  wbOfficialDLC[10] := 'ccBGSFO4019-ChineseStealthArmor.esl';
-//  wbOfficialDLC[11] := 'ccBGSFO4020-PowerArmorSkin(Black).esl';
-//  wbOfficialDLC[12] := 'ccBGSFO4020-PowerArmorSkin(Camo01).esl';
-//  wbOfficialDLC[13] := 'ccBGSFO4020-PowerArmorSkin(Camo02).esl';
-//  wbOfficialDLC[14] := 'ccBGSFO4020-PowerArmorSkin(Chrome).esl';
-//  wbOfficialDLC[15] := 'ccBGSFO4038-HorseArmor.esl';
-//  wbOfficialDLC[16] := 'ccBGSFO4039-TunnelSnakes.esl';
-//  wbOfficialDLC[17] := 'ccBGSFO4041-DoomMarineArmor.esl';
-//  wbOfficialDLC[18] := 'ccBGSFO4042-BFG.esl';
-//  wbOfficialDLC[19] := 'ccBGSFO4043-DoomChainsaw.esl';
-//  wbOfficialDLC[20] := 'ccBGSFO4044-HellfirePowerArmor.esl';
-//  wbOfficialDLC[21] := 'ccFSVFO4001-ModularMilitaryBackpack.esl';
-//  wbOfficialDLC[22] := 'ccFSVFO4002-MidCenturyModern.esl';
-//  wbOfficialDLC[23] := 'ccFRSFO4001-HandmadeShotgun.esl';
-//  wbOfficialDLC[24] := 'ccEEJFO4001-DecorationPack.esl';
+  wbCreationClubContentFileName := 'Fallout4.ccc';
 end;
 
 initialization

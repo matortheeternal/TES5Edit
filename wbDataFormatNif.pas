@@ -1114,6 +1114,7 @@ begin
     Exit;
 
   CalculateTangentsBitangents(verts, norms, texco, triangles, tan, bin);
+  //CalculateTangentsBitangents2(verts, norms, texco, triangles, tan, bin);
 
   if Length(tan) = 0 then
     Exit;
@@ -1628,7 +1629,8 @@ var
 begin
   Result := False;
   for i := 0 to Pred(BlocksCount) do
-    Result := Result or Blocks[i].UpdateNormals(True);
+    if Blocks[i].UpdateNormals(True) then
+      Result := True;
 end;
 
 function TwbNifFile.SpellUpdateTangents: Boolean;
@@ -1637,7 +1639,8 @@ var
 begin
   Result := False;
   for i := 0 to Pred(BlocksCount) do
-    Result := Result or Blocks[i].UpdateTangents(False);
+    if Blocks[i].UpdateTangents(False) then
+      Result := True;
 end;
 
 function TwbNifFile.SpellAddUpdateTangents: Boolean;
@@ -1646,7 +1649,8 @@ var
 begin
   Result := False;
   for i := 0 to Pred(BlocksCount) do
-    Result := Result or Blocks[i].UpdateTangents(True);
+    if Blocks[i].UpdateTangents(True) then
+      Result := True;
 end;
 
 function TwbNifFile.GetHeader: TwbNifBlock;
@@ -1820,7 +1824,10 @@ end;
 procedure TwbNifFile.SetNifVersion(aVersion: TwbNifVersion);
 var
   v: string;
+  h: TwbNifBlock;
 begin
+  h := Header; // access and create header if missing
+
   if aVersion = nfTES3 then begin
     v := '4.0.0.2';
     UserVersion := 0;
@@ -1854,13 +1861,13 @@ begin
     Exit;
 
   Version := wbNifVersionToInt(v);
-  Header.NativeValues['Version'] := Version;
-  Header.NativeValues['User Version'] := UserVersion;
-  Header.NativeValues['User Version 2'] := UserVersion2;
+  h.NativeValues['Version'] := Version;
+  h.NativeValues['User Version'] := UserVersion;
+  h.NativeValues['User Version 2'] := UserVersion2;
   if aVersion = nfTES3 then
-    Header.EditValues['Magic'] := sNifMagicNetImmerse + v
+    h.EditValues['Magic'] := sNifMagicNetImmerse + v
   else
-    Header.EditValues['Magic'] := sNifMagicGamebryo + v;
+    h.EditValues['Magic'] := sNifMagicGamebryo + v;
 
   FNifVersion := aVersion;
 end;
@@ -2858,7 +2865,7 @@ end;
 { NiAVObject }
 function NiAVObject_DecideFlags(const e: TdfElement): Integer; begin if nif(e).UserVersion2 > 26 then Result := 1 else Result := 0; end;
 function NiAVObject_EnProperties(const e: TdfElement): Boolean; begin Result := nif(e).UserVersion2 <= 34; end;
-function NiAVObject_EnBoundingBox(const e: TdfElement): Boolean; begin Result := (nif(e).Version <= v4220) and (e.NativeValues['..\Has Bounding Box'] <> 0); end;
+function NiAVObject_EnBoundingVolume(const e: TdfElement): Boolean; begin Result := (nif(e).Version <= v4220) and (e.NativeValues['..\Has Bounding Volume'] <> 0); end;
 
 procedure wbDefineNiAVObject;
 begin
@@ -2873,13 +2880,8 @@ begin
       DF_OnGetEnabled, @NiAVObject_EnProperties,
       DF_OnBeforeSave, @RemoveNoneLinks
     ]),
-    wbBool('Has Bounding Box', [DF_OnGetEnabled, @EnBefore4220]),
-    dfStruct('Bounding Box', [
-      dfInteger('Unknown Int', dtU32),
-      wbVector3('Translation'),
-      wbRotMatrix33('Rotation'),
-      wbVector3('Radius')
-    ], [DF_OnGetEnabled, @NiAVObject_EnBoundingBox]),
+    wbBool('Has Bounding Volume', [DF_OnGetEnabled, @EnBefore4220]),
+    wbBoundingVolume('Bounding Volume', [DF_OnGetEnabled, @NiAVObject_EnBoundingVolume]),
     wbNiRef('Collision Object', 'NiCollisionObject', [DF_OnGetEnabled, @EnSince10010])
   ]), 'NiObjectNET', True);
 end;
@@ -3538,8 +3540,60 @@ begin
         dfFloat('Scale', '1.0'),
         wbNiBound('Bounding Sphere')
       ]), -4),
-      dfInteger('Unknown Int 1', dtU32),
-      dfInteger('Unknown Int 2', dtU32)
+      wbVertexDesc('VertexDesc', [])
+    ]), 0, 'Num Data', [])
+  ]), 'NiExtraData', False);
+end;
+
+//===========================================================================
+{ BSPackedCombinedGeomDataExtra }
+function wbDefineBSPackedCombinedGeomDataExtra_EnVertexData(const e: TdfElement): Boolean;
+begin
+  Result := True;
+  e.UserData := e.NativeValues['..\VertexDesc\VF']; // cache VF here
+end;
+
+procedure wbDefineBSPackedCombinedGeomDataExtra_GetCountTriangles(const e: TdfElement; var aCount: Integer);
+var
+  el: TdfElement;
+  i: integer;
+begin
+  // sum of LOD Triangle Count
+  el := e.Elements['..\LOD'];
+  if Assigned(el) then
+    for i := 0 to Pred(el.Count) do
+      Inc(aCount, Integer(el[i][0].NativeValue));
+end;
+
+procedure wbDefineBSPackedCombinedGeomDataExtra;
+begin
+  wbNiObject(wbNifBlock('BSPackedCombinedGeomDataExtra', [
+    wbVertexDesc('VertexDesc', []),
+    dfInteger('Num Vertices', dtU32),
+    dfInteger('Num Triangles', dtU32),
+    dfInteger('Unknown Flags 1', dtU32),
+    dfInteger('Unknown Flags 2', dtU32),
+    dfInteger('Num Data', dtU32),
+    dfArray('Object Data', dfStruct('Object Data', [
+      dfInteger('Num Verts', dtU32),
+      dfArray('LOD', dfStruct('LOD', [
+        dfInteger('Triangle Count', dtU32),
+        dfInteger('Triangle Offset', dtU32)
+      ]), -4),
+      dfArray('Combined', dfStruct('Combined', [
+        dfFloat('Grayscale to Palette Scale'),
+        wbRotMatrix33('Rotation'),
+        wbVector3('Translation'),
+        dfFloat('Scale', '1.0'),
+        wbNiBound('Bounding Sphere')
+      ]), -4),
+      wbVertexDesc('VertexDesc', []),
+      dfArray('Vertex Data', wbBSVertexData('Vertex Data'), 0, 'Num Verts', [
+        DF_OnGetEnabled, @wbDefineBSPackedCombinedGeomDataExtra_EnVertexData
+      ]),
+      dfArray('Triangles', wbTriangle('Triangles'), 0, '', [
+        DF_OnGetCount, @wbDefineBSPackedCombinedGeomDataExtra_GetCountTriangles
+      ])
     ]), 0, 'Num Data', [])
   ]), 'NiExtraData', False);
 end;
@@ -3627,8 +3681,8 @@ end;
 procedure wbDefineNiAlphaProperty;
 begin
   wbNiObject(wbNifBlock('NiAlphaProperty', [
-    dfInteger('Flags', dtU16, '237'),
-    dfInteger('Threshold', dtU8)
+    dfInteger('Flags', dtU16, '4844'),
+    dfInteger('Threshold', dtU8, '128')
   ]), 'NiProperty', False);
 end;
 
@@ -3647,7 +3701,7 @@ procedure wbDefineNiFogProperty;
 begin
   wbNiObject(wbNifBlock('NiFogProperty', [
     dfInteger('Flags', dtU16),
-    dfFloat('Fog Depth'),
+    dfFloat('Fog Depth', '1.0'),
     wbColor3('Fog Color')
   ]), 'NiProperty', False);
 end;
@@ -3661,12 +3715,12 @@ procedure wbDefineNiMaterialProperty;
 begin
   wbNiObject(wbNifBlock('NiMaterialProperty', [
     dfInteger('Flags', dtU16, [DF_OnGetEnabled, @EnBefore10012]),
-    wbColor3('Ambient Color', [DF_OnGetEnabled, @NiMaterialProperty_EnAmbientColor]),
-    wbColor3('Diffuse Color', [DF_OnGetEnabled, @NiMaterialProperty_EnAmbientColor]),
-    wbColor3('Specular Color'),
-    wbColor3('Emissive Color'),
-    dfFloat('Glossiness'),
-    dfFloat('Alpha'),
+    wbColor3('Ambient Color', '#FFFFFF', [DF_OnGetEnabled, @NiMaterialProperty_EnAmbientColor]),
+    wbColor3('Diffuse Color', '#FFFFFF', [DF_OnGetEnabled, @NiMaterialProperty_EnAmbientColor]),
+    wbColor3('Specular Color', '#FFFFFF', []),
+    wbColor3('Emissive Color', '#000000', []),
+    dfFloat('Glossiness', '10.0'),
+    dfFloat('Alpha', '1.0'),
     dfFloat('Emissive Mult', '1.0', [DF_OnGetEnabled, @NiMaterialProperty_EnEmissiveMult])
   ]), 'NiProperty', False);
 end;
@@ -3809,8 +3863,8 @@ procedure wbDefineBSShaderProperty;
 begin
   wbNiObject(wbNifBlock('BSShaderProperty', [
     wbBSShaderType('Shader Type', 'SHADER_DEFAULT', [DF_OnGetEnabled, @BSShaderProperty_EnShaderType]),
-    wbBSShaderFlags('Shader Flags', 'SF_Specular | SF_Remappable_Textures | SF_ZBuffer_Test', [DF_OnGetEnabled, @BSShaderProperty_EnShaderType]),
-    wbBSShaderFlags2('Shader Flags 2', 'SF2_ZBuffer_Write', [DF_OnGetEnabled, @BSShaderProperty_EnShaderType]),
+    wbBSShaderFlags('Shader Flags', 'Specular | Remappable_Textures | ZBuffer_Test', [DF_OnGetEnabled, @BSShaderProperty_EnShaderType]),
+    wbBSShaderFlags2('Shader Flags 2', 'ZBuffer_Write', [DF_OnGetEnabled, @BSShaderProperty_EnShaderType]),
     dfFloat('Environment Map Scale', '1.0', [DF_OnGetEnabled, @BSShaderProperty_EnShaderType])
   ]), 'NiShadeProperty', False);
 end;
@@ -3903,6 +3957,7 @@ function BSLightingShaderProperty_EnShaderType(const e: TdfElement): Boolean; be
 function BSLightingShaderProperty_DecideShaderFlags(const e: TdfElement): Integer; begin if nif(e).UserVersion2 <> 130 then Result := 0 else Result := 1; end;
 function BSLightingShaderProperty_EnWet(const e: TdfElement): Boolean; begin Result := nif(e).UserVersion2 = 130; end;
 function BSLightingShaderProperty_EnLightingEffect(const e: TdfElement): Boolean; begin Result := nif(e).UserVersion2 < 130; end;
+function BSLightingShaderProperty_EnBacklightPower(const e: TdfElement): Boolean; begin Result := (nif(e).UserVersion2 = 130) and (e.EditValues['..\Rimlight Power'] = 'Max'); end;
 function BSLightingShaderProperty_EnEnvMapScale(const e: TdfElement): Boolean; begin Result := e.NativeValues['..\Shader Type'] = 1; end;
 function BSLightingShaderProperty_EnUnknownEnvMapShort(const e: TdfElement): Boolean; begin Result := (nif(e).UserVersion2 = 130) and (e.NativeValues['..\Shader Type'] = 1); end;
 function BSLightingShaderProperty_EnSkinTintColor(const e: TdfElement): Boolean; begin Result := e.NativeValues['..\Shader Type'] = 5; end;
@@ -3923,27 +3978,28 @@ begin
     ], [DF_OnDecide, @BSLightingShaderProperty_DecideShaderFlags]),
     dfUnion([
       wbSkyrimShaderPropertyFlags2('Shader Flags 2', '32801', []),
-      wbFallout4ShaderPropertyFlags2('Shader Flags 2', '129', [])
+      wbFallout4ShaderPropertyFlags2('Shader Flags 2', '1', [])
     ], [DF_OnDecide, @BSLightingShaderProperty_DecideShaderFlags]),
     wbTexCoord('UV Offset'),
     wbTexCoord('UV Scale', '1 1', []),
     wbNiRef('Texture Set', 'BSShaderTextureSet'),
-    wbColor3('Emissive Color'),
+    wbColor3('Emissive Color', '#000000', []),
     dfFloat('Emissive Multiple'),
     wbString('Wet Material', [DF_OnGetEnabled, @BSLightingShaderProperty_EnWet]),
-    wbTexClampMode('Texture Clamp Mode', '', []),
+    wbTexClampMode('Texture Clamp Mode', '3', []),
     dfFloat('Alpha', '1.0'),
     dfFloat('Refraction Strength'),
-    dfFloat('Glossiness', '80.0'),
+    dfFloat('Glossiness', '80.0', [DF_OnGetEnabled, @BSLightingShaderProperty_EnLightingEffect]),
+    dfFloat('Smoothness', '1.0', [DF_OnGetEnabled, @BSLightingShaderProperty_EnWet]),
     wbColor3('Specular Color'),
     dfFloat('Specular Strength', '1.0'),
     dfFloat('Lighting Effect 1', '0.3', [DF_OnGetEnabled, @BSLightingShaderProperty_EnLightingEffect]),
     dfFloat('Lighting Effect 2', '2.0', [DF_OnGetEnabled, @BSLightingShaderProperty_EnLightingEffect]),
-    dfFloat('Subsurface Rolloff', [DF_OnGetEnabled, @BSLightingShaderProperty_EnWet]),
-    dfFloat('Unknown Float 1', [DF_OnGetEnabled, @BSLightingShaderProperty_EnWet]),
-    dfFloat('Backlight Power', [DF_OnGetEnabled, @BSLightingShaderProperty_EnWet]),
+    dfFloat('Subsurface Rolloff', '0.3', [DF_OnGetEnabled, @BSLightingShaderProperty_EnWet]),
+    dfFloat('Rimlight Power', 'Max', [DF_OnGetEnabled, @BSLightingShaderProperty_EnWet]),
+    dfFloat('Backlight Power', [DF_OnGetEnabled, @BSLightingShaderProperty_EnBacklightPower]),
     dfFloat('Grayscale to Palette Scale', [DF_OnGetEnabled, @BSLightingShaderProperty_EnWet]),
-    dfFloat('Fresnel Power', [DF_OnGetEnabled, @BSLightingShaderProperty_EnWet]),
+    dfFloat('Fresnel Power', '5.0', [DF_OnGetEnabled, @BSLightingShaderProperty_EnWet]),
     dfStruct('Wetness', [
       dfFloat('Spec Scale', '-1.0'),
       dfFloat('Spec Power', '-1.0'),
@@ -3952,7 +4008,7 @@ begin
       dfFloat('Fresnel Power', '-1.0'),
       dfFloat('Metalness', '-1.0')
     ], [DF_OnGetEnabled, @BSLightingShaderProperty_EnWet]),
-    dfFloat('Environment Map Scale', [DF_OnGetEnabled, @BSLightingShaderProperty_EnEnvMapScale]),
+    dfFloat('Environment Map Scale', '1.0', [DF_OnGetEnabled, @BSLightingShaderProperty_EnEnvMapScale]),
     dfInteger('Unknown EnvMap Short', dtU16, [DF_OnGetEnabled, @BSLightingShaderProperty_EnUnknownEnvMapShort]),
     wbColor3('Skin Tint Color', [DF_OnGetEnabled, @BSLightingShaderProperty_EnSkinTintColor]),
     dfInteger('Unknown SkinTint Int', dtU32, [DF_OnGetEnabled, @BSLightingShaderProperty_EnUnknownSkinTintInt]),
@@ -4382,7 +4438,7 @@ function BSTriShape_EnVertexData(const e: TdfElement): Boolean;
 begin
   Result := (nif(e).UserVersion2 in [100, 130]) and (e.NativeValues['..\Data Size'] > 0);
   if Result then e.UserData := e.NativeValues['..\VertexDesc\VF']; // cache VF here
- end;
+end;
 
 function BSTriShape_EnTriangles(const e: TdfElement): Boolean; begin Result := e.NativeValues['..\Data Size'] > 0; end;
 function BSTriShape_EnParticleDataSize(const e: TdfElement): Boolean; begin Result := nif(e).UserVersion2 = 100; end;
@@ -4635,16 +4691,6 @@ end;
 //===========================================================================
 { NiCollisionData * }
 function NiCollisionData_EnBoundingVolume(const e: TdfElement): Boolean; begin Result := e.NativeValues['..\Use ABV'] = 1; end;
-function NiCollisionData_EnType0(const e: TdfElement): Boolean; begin Result := e.NativeValues['..\Collision Type'] = 0; end;
-function NiCollisionData_EnType1(const e: TdfElement): Boolean; begin Result := e.NativeValues['..\Collision Type'] = 1; end;
-function NiCollisionData_EnType2(const e: TdfElement): Boolean; begin Result := e.NativeValues['..\Collision Type'] = 2; end;
-function NiCollisionData_EnType4(const e: TdfElement): Boolean;
-begin
-  Result := False;
-  if e.NativeValues['..\Collision Type'] = 4 then
-    e.DoException('NiCollisionData UnionBV type is not supported');
-end;
-function NiCollisionData_EnType5(const e: TdfElement): Boolean; begin Result := e.NativeValues['..\Collision Type'] = 5; end;
 
 procedure wbDefineNiCollisionData;
 begin
@@ -4652,29 +4698,7 @@ begin
     wbPropagationMode('Propagation Mode', '', []),
     wbCollisionMode('Collision Mode', '', [DF_OnGetEnabled, @EnSince10100]),
     dfInteger('Use ABV', dtU8),
-    dfStruct('Bounding Volume', [
-      wbBoundVolumeType('Collision Type', '', []),
-      dfStruct('Sphere', [
-        wbVector3('Center'),
-        dfFloat('Radius')
-      ], [DF_OnGetEnabled, @NiCollisionData_EnType0]),
-      dfStruct('Box', [
-        wbVector3('Center'),
-        dfArray('Axis', wbVector3('Axis'), 3),
-        wbVector3('Extent')
-      ], [DF_OnGetEnabled, @NiCollisionData_EnType1]),
-      dfStruct('Capsule', [
-        wbVector3('Center'),
-        wbVector3('Origin'),
-        dfFloat('Extent'),
-        dfFloat('Radius')
-      ], [DF_OnGetEnabled, @NiCollisionData_EnType2]),
-      dfInteger('Union BV', dtU32, [DF_OnGetEnabled, @NiCollisionData_EnType4]),
-      dfStruct('Half Space', [
-        wbNiPlane('Plane'),
-        wbVector3('Center')
-      ], [DF_OnGetEnabled, @NiCollisionData_EnType5])
-    ], [DF_OnGetEnabled, @NiCollisionData_EnBoundingVolume])
+    wbBoundingVolume('Bounding Volume', [DF_OnGetEnabled, @NiCollisionData_EnBoundingVolume])
   ]), 'NiCollisionObject', False);
 end;
 
@@ -4683,7 +4707,7 @@ end;
 procedure wbDefinebhkNiCollisionObject;
 begin
   wbNiObject(wbNifBlock('bhkNiCollisionObject', [
-    wbbhkCOFlags('Flags', 'BHKCO_ACTIVE', []),
+    wbbhkCOFlags('Flags', 'ACTIVE', []),
     wbNiPtr('Body', 'bhkWorldObject')
   ]), 'NiCollisionObject', True);
 end;
@@ -5361,7 +5385,7 @@ function NiDynamicEffect_EnNodes(const e: TdfElement): Boolean; begin with nif(e
 procedure wbDefineNiDynamicEffect;
 begin
   wbNiObject(wbNifBlock('NiDynamicEffect', [
-    wbBool('Switch State', [DF_OnGetEnabled, @NiDynamicEffect_EnSwitchState]),
+    wbBool('Switch State', '1', [DF_OnGetEnabled, @NiDynamicEffect_EnSwitchState]),
     dfArray('Affected Node Pointers', dfInteger('Pointer', dtU32), -4, '', [DF_OnGetEnabled, @EnBefore4002]),
     dfArray('Affected Nodes', wbNiPtr('Node', 'NiNode'), -4, '', [
       DF_OnGetEnabled, @NiDynamicEffect_EnNodes,
@@ -5375,10 +5399,10 @@ end;
 procedure wbDefineNiLight;
 begin
   wbNiObject(wbNifBlock('NiLight', [
-    dfFloat('Dimmer'),
-    wbColor3('Ambient Color'),
-    wbColor3('Diffuse Color'),
-    wbColor3('Speculat Color')
+    dfFloat('Dimmer', '1.0'),
+    wbColor3('Ambient Color', '#000000', []),
+    wbColor3('Diffuse Color', '#000000', []),
+    wbColor3('Speculat Color', '#000000', [])
   ]), 'NiDynamicEffect', True);
 end;
 
@@ -5402,7 +5426,7 @@ procedure wbDefineNiPointLight;
 begin
   wbNiObject(wbNifBlock('NiPointLight', [
     dfFloat('Constant Attenuation'),
-    dfFloat('Linear Attenuation'),
+    dfFloat('Linear Attenuation', '1.0'),
     dfFloat('Quadratic Attenuation')
   ]), 'NiLight', False);
 end;
@@ -5414,7 +5438,7 @@ begin
   wbNiObject(wbNifBlock('NiSpotLight', [
     dfFloat('Outer Spot Angle'),
     dfFloat('Inner Spot Angle', [DF_OnGetEnabled, @EnSince20205]),
-    dfFloat('Exponent')
+    dfFloat('Exponent', '1.0')
   ]), 'NiPointLight', False);
 end;
 
@@ -5607,7 +5631,7 @@ end;
 procedure wbDefineNiFloatInterpolator;
 begin
   wbNiObject(wbNifBlock('NiFloatInterpolator', [
-    dfFloat('Pose Value'),
+    dfFloat('Pose Value', 'Min'),
     wbNiRef('Data', 'NiFloatData')
   ]), 'NiKeyBasedInterpolator', False);
 end;
@@ -5628,7 +5652,7 @@ end;
 procedure wbDefineNiPoint3Interpolator;
 begin
   wbNiObject(wbNifBlock('NiPoint3Interpolator', [
-    wbVector3('Pose Value'),
+    wbVector3('Pose Value', 'Min Min Min', []),
     wbNiRef('Data', 'NiPosData')
   ]), 'NiKeyBasedInterpolator', False);
 end;
@@ -5638,8 +5662,8 @@ end;
 procedure wbDefineNiPathInterpolator;
 begin
   wbNiObject(wbNifBlock('NiPathInterpolator', [
-    wbPathFlags('Flags', '', []),
-    dfInteger('Bank Dir', dtU32),
+    wbPathFlags('Flags', '3', []),
+    dfInteger('Bank Dir', dtU32, '1'),
     dfFloat('Max Bank Angle'),
     dfFloat('Smoothing'),
     dfInteger('Follow Axis', dtU16),
@@ -5653,7 +5677,7 @@ end;
 procedure wbDefineNiBoolInterpolator;
 begin
   wbNiObject(wbNifBlock('NiBoolInterpolator', [
-    wbBool('Pose Value'),
+    wbBool('Pose Value', '2', []),
     wbNiRef('Data', 'NiBoolData')
   ]), 'NiKeyBasedInterpolator', False);
 end;
@@ -5677,13 +5701,13 @@ begin
     dfFloat('Weight Threshold'),
     dfStruct('Interpolator Data', [
       dfInteger('Interp Count', dtU8),
-      dfInteger('Single Index', dtU8),
-      dfInteger('High Priority', dtS8), // char
-      dfInteger('Next High Priority', dtS8), // char
-      dfFloat('Single Time'),
-      dfFloat('High Weighs Sum'),
-      dfFloat('Next High Weighs Sum'),
-      dfFloat('Next Ease Spinner'),
+      dfInteger('Single Index', dtU8, '255'),
+      dfInteger('High Priority', dtS8, '-128'),
+      dfInteger('Next High Priority', dtS8, '-128'),
+      dfFloat('Single Time', 'Min'),
+      dfFloat('High Weighs Sum', 'Min'),
+      dfFloat('Next High Weighs Sum', 'Min'),
+      dfFloat('Next Ease Spinner', 'Min'),
       dfArray('Interp Array Items', dfStruct('Interp Array Items', [
         wbNiRef('Interpolator', 'NiInterplator'),
         dfFloat('Weight'),
@@ -5749,8 +5773,8 @@ end;
 procedure wbDefineNiBSplineInterpolator;
 begin
   wbNiObject(wbNifBlock('NiBSplineInterpolator', [
-    dfFloat('Start Time'),
-    dfFloat('Stop Time'),
+    dfFloat('Start Time', 'Min'),
+    dfFloat('Stop Time', 'Min'),
     wbNiRef('Spline Data', 'NiBSplineData'),
     wbNiRef('Basis Data', 'NiBSplineBasisData')
   ]), 'NiInterpolator', True);
@@ -5870,9 +5894,9 @@ begin
     wbNiRef('Next Controller', 'NiTimeController'),
     dfInteger('Flags', dtU16),
     dfFloat('Frequency', '1.0'),
-    dfFloat('Phase', '1.0'),
-    dfFloat('Start Time', '1.0'),
-    dfFloat('Stop Time', '1.0'),
+    dfFloat('Phase'),
+    dfFloat('Start Time', 'Min'),
+    dfFloat('Stop Time', 'Min'),
     wbNiPtr('Target', 'NiObjectNET')
   ]), 'NiObject', True);
 end;
@@ -6171,7 +6195,7 @@ procedure wbDefineNiPathController;
 begin
   wbNiObject(wbNifBlock('NiPathController', [
     wbPathFlags('Path Flags', '', [DF_OnGetEnabled, @EnSince10100]),
-    dfInteger('Bank Dir', dtS32),
+    dfInteger('Bank Dir', dtS32, '1'),
     dfFloat('Max Bank Angle'),
     dfFloat('Smoothing'),
     dfInteger('Follow Axis', dtS16),
@@ -6489,7 +6513,7 @@ procedure wbDefineBSEffectShaderPropertyColorController;
 begin
   wbNiObject(wbNifBlock('BSEffectShaderPropertyColorController', [
     wbEffectShaderControlledColor('Type of Controlled Color', '', [])
-  ]), 'NiFloatInterpController', False);
+  ]), 'NiPoint3InterpController', False);
 end;
 
 //===========================================================================
@@ -6507,7 +6531,7 @@ procedure wbDefineBSLightingShaderPropertyColorController;
 begin
   wbNiObject(wbNifBlock('BSLightingShaderPropertyColorController', [
     wbLightingShaderControlledColor('Type of Controlled Color', '', [])
-  ]), 'NiFloatInterpController', False);
+  ]), 'NiPoint3InterpController', False);
 end;
 
 //===========================================================================
@@ -6525,7 +6549,7 @@ procedure wbDefineBSFrustumFOVController;
 begin
   wbNiObject(wbNifBlock('BSFrustumFOVController', [
     wbNiRef('Interpolator', 'NiFloatInterpolator')
-  ]), 'NiTimeController', False);
+  ]), 'NiFloatInterpController', False);
 end;
 
 //===========================================================================
@@ -6550,7 +6574,7 @@ end;
 { BSNiAlphaPropertyTestRefController }
 procedure wbDefineBSNiAlphaPropertyTestRefController;
 begin
-  wbNiObject(wbNifBlock('BSNiAlphaPropertyTestRefController'), 'NiAlphaController', False);
+  wbNiObject(wbNifBlock('BSNiAlphaPropertyTestRefController'), 'NiFloatInterpController', False);
 end;
 
 //===========================================================================
@@ -6660,10 +6684,10 @@ begin
     dfFloat('Weight', '1.0', [DF_OnGetEnabled, @EnSince1010106]),
     wbNiRef('Text Keys', 'NiTextKeyExtraData', [DF_OnGetEnabled, @EnSince1010106]),
     wbCycleType('Cycle Type', '', [DF_OnGetEnabled, @EnSince1010106]),
-    dfFloat('Frequency', [DF_OnGetEnabled, @EnSince1010106]),
+    dfFloat('Frequency', '1.0', [DF_OnGetEnabled, @EnSince1010106]),
     dfFloat('Phase', [DF_OnGetEnabled, @NiControllerSequence_EnPhase]),
-    dfFloat('Start Time', [DF_OnGetEnabled, @EnSince1010106]),
-    dfFloat('Stop Time', [DF_OnGetEnabled, @EnSince1010106]),
+    dfFloat('Start Time', 'Min', [DF_OnGetEnabled, @EnSince1010106]),
+    dfFloat('Stop Time', 'Min', [DF_OnGetEnabled, @EnSince1010106]),
     dfInteger('Play Backwards', dtU8, [DF_OnGetEnabled, @En1010106]),
     wbNiPtr('Manager', 'NiControllerManager', [DF_OnGetEnabled, @EnSince1010106]),
     wbString('Accum Root Name', [DF_OnGetEnabled, @EnSince1010106]),
@@ -6721,7 +6745,7 @@ begin
     dfInteger('Near Begin', dtU16, [DF_OnGetEnabled, @NiParticleSystem_EnFar]),
     dfInteger('Near End', dtU16, [DF_OnGetEnabled, @NiParticleSystem_EnFar]),
     wbNiRef('Data', 'NiPSysData', [DF_OnGetEnabled, @NiParticleSystem_EnData]),
-    wbBool('World Space', [DF_OnGetEnabled, @EnSince10100]),
+    wbBool('World Space', '1', [DF_OnGetEnabled, @EnSince10100]),
     dfArray('Modifiers', wbNiRef('Modifiers', 'NiPSysModifier'), -4, '', [
       DF_OnGetEnabled, @EnSince10100,
       DF_OnBeforeSave, @RemoveNoneLinks
@@ -6936,7 +6960,7 @@ end;
 procedure wbDefineNiPSysCollider;
 begin
   wbNiObject(wbNifBlock('NiPSysCollider', [
-    dfFloat('Bounce'),
+    dfFloat('Bounce', '1.0'),
     wbBool('Spawn on Collide'),
     wbBool('Die on Collide'),
     wbNiRef('Spawn Modifier', 'NiPSysSpawnModifier'),
@@ -7072,10 +7096,10 @@ procedure wbDefineNiPSysDragModifier;
 begin
   wbNiObject(wbNifBlock('NiPSysDragModifier', [
     wbNiPtr('Drag Object', 'NiAVObject'),
-    wbVector3('Drag Axis'),
-    dfFloat('Percentage'),
-    dfFloat('Range'),
-    dfFloat('Range Falloff')
+    wbVector3('Drag Axis', '1.0 0.0 0.0', []),
+    dfFloat('Percentage', '0.05'),
+    dfFloat('Range', 'Max'),
+    dfFloat('Range Falloff', 'Max')
   ]), 'NiPSysModifier', False);
 end;
 
@@ -7087,9 +7111,9 @@ procedure wbDefineNiPSysGravityModifier;
 begin
   wbNiObject(wbNifBlock('NiPSysGravityModifier', [
     wbNiPtr('Gravity Object', 'NiAVObject'),
-    wbVector3('Gravity Axis'),
+    wbVector3('Gravity Axis', '1.0 0.0 0.0', []),
     dfFloat('Decay'),
-    dfFloat('Strength'),
+    dfFloat('Strength', '1.0'),
     wbForceType('Force Type', '', []),
     dfFloat('Turbulence'),
     dfFloat('Turbulence Scale', '1.0'),
@@ -7138,8 +7162,8 @@ begin
     dfFloat('Rotation Angle', [DF_OnGetEnabled, @EnSince20004]),
     dfFloat('Rotation Angle Variation', [DF_OnGetEnabled, @EnSince20004]),
     wbBool('Random Rot Speed Sign', [DF_OnGetEnabled, @EnSince20004]),
-    wbBool('Random Axis'),
-    wbVector3('Axis')
+    wbBool('Random Axis', '1', []),
+    wbVector3('Axis', '1.0 0.0 0.0', [])
   ]), 'NiPSysModifier', False);
 end;
 
@@ -7149,9 +7173,9 @@ procedure wbDefineNiPSysSpawnModifier;
 begin
   wbNiObject(wbNifBlock('NiPSysSpawnModifier', [
     dfInteger('Num Spawn Generations', dtU16),
-    dfFloat('Percentage Spawned'),
-    dfInteger('Min Num to Spawn', dtU16),
-    dfInteger('Max Num to Spawn', dtU16),
+    dfFloat('Percentage Spawned', '1.0'),
+    dfInteger('Min Num to Spawn', dtU16, '1'),
+    dfInteger('Max Num to Spawn', dtU16, '1'),
     dfFloat('Spawn Speed Variation'),
     dfFloat('Spawn Dir Variation'),
     dfFloat('Life Span'),
@@ -7177,7 +7201,7 @@ end;
 procedure wbDefineNiPSysAirFieldModifier;
 begin
   wbNiObject(wbNifBlock('NiPSysAirFieldModifier', [
-    wbVector3('Direction'),
+    wbVector3('Direction', '-1.0 0.0 0.0', []),
     dfFloat('Air Friction'),
     dfFloat('Inherit Velocity'),
     wbBool('Inherit Rotation'),
@@ -7202,7 +7226,7 @@ end;
 procedure wbDefineNiPSysGravityFieldModifier;
 begin
   wbNiObject(wbNifBlock('NiPSysGravityFieldModifier', [
-    wbVector3('Direction')
+    wbVector3('Direction', '0.0 -1.0 0.0', [])
   ]), 'NiPSysFieldModifier', False);
 end;
 
@@ -7278,10 +7302,10 @@ end;
 procedure wbDefineBSPSysLODModifier;
 begin
   wbNiObject(wbNifBlock('BSPSysLODModifier', [
-    dfFloat('LOD Begin Distance'),
-    dfFloat('LOD End Distance'),
-    dfFloat('Unknown Fade Factor 1'),
-    dfFloat('Unknown Fade Factor 2')
+    dfFloat('LOD Begin Distance', '0.1'),
+    dfFloat('LOD End Distance', '0.7'),
+    dfFloat('End Emit Scale', '0.2'),
+    dfFloat('End Size', '1.0')
   ]), 'NiPSysModifier', False);
 end;
 
@@ -7356,7 +7380,7 @@ begin
     dfFloat('Planar Angle'),
     dfFloat('Planar Angle Variation'),
     wbColor4('Initial Color'),
-    dfFloat('Initial Radius'),
+    dfFloat('Initial Radius', '1.0'),
     dfFloat('Radius Variation', [DF_OnGetEnabled, @EnSince10401]),
     dfFloat('Life Span'),
     dfFloat('Life Span Variation')
@@ -7410,7 +7434,7 @@ begin
     dfArray('Emitter Meshes', wbNiRef('Emitter Meshes', 'NiAVObject'), -4, '', [DF_OnBeforeSave, @RemoveNoneLinks]),
     wbVelocityType('Initial Velocity Type', '', []),
     wbEmitFrom('Emission Type', '', []),
-    wbVector3('Emission Axis')
+    wbVector3('Emission Axis', '1.0 0.0 0.0', [])
   ]), 'NiPSysEmitter', False);
 end;
 
@@ -7570,6 +7594,7 @@ begin
   wbDefineBSClothExtraData;
   wbDefineBSEyeCenterExtraData;
   wbDefineBSPackedCombinedSharedGeomDataExtra;
+  wbDefineBSPackedCombinedGeomDataExtra;
   wbDefineBSPositionData;
   wbDefineBSConnectPoint__Parents;
   wbDefineBSConnectPoint__Children;
