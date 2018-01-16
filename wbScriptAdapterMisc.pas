@@ -341,6 +341,7 @@ begin
 end;
 
 
+
 { TStringList }
 
 procedure TStringList_Read_CaseSensitive(var Value: Variant; Args: TJvInterpreterArgs);
@@ -1710,7 +1711,6 @@ end;
 
 
 
->>>>>>> dev
 
 
 procedure RegisterJvInterpreterAdapter(JvInterpreterAdapter: TJvInterpreterAdapter);
@@ -1826,10 +1826,7 @@ begin
     AddFunction('ShellApi', 'ShellExecuteWait', JvInterpreter_ShellExecuteWait, 6, [varEmpty, varEmpty, varEmpty, varEmpty, varEmpty, varEmpty], varEmpty);
     AddFunction('Windows', 'CreateProcessWait', JvInterpreter_CreateProcessWait, 4, [varEmpty, varEmpty, varEmpty, varEmpty], varEmpty);
     AddFunction('Windows', 'Sleep', JvInterpreter_Sleep, 1, [varEmpty], varEmpty);
-<<<<<<< HEAD
-=======
     AddFunction('Windows', 'GetKeyState', JvInterpreter_GetKeyState, 1, [varEmpty], varEmpty);
->>>>>>> dev
     AddFunction('FileCtrl', 'SelectDirectory', JvInterpreter_SelectDirectory, 4, [varEmpty, varEmpty, varEmpty, varEmpty], varEmpty);
 
     { TEncoding }
@@ -1848,7 +1845,6 @@ begin
     AddFunction('Math', 'Min', JvInterpreter_Min, 2, [varEmpty, varEmpty], varEmpty);
     AddFunction('Math', 'IntPower', JvInterpreter_IntPower, 2, [varEmpty,varEmpty], varEmpty);
     AddFunction('Math', 'Power', JvInterpreter_Power, 2, [varEmpty,varEmpty], varEmpty);
-<<<<<<< HEAD
 
     { TVector3D }
     AddClass('Vectors', TVector3D, 'TVector3D');
@@ -1859,8 +1855,6 @@ begin
     AddSet(TVector3D, 'Y', TVector3D_Write_Y, 0, [varEmpty]);
     AddGet(TVector3D, 'Z', TVector3D_Read_Z, 0, [varEmpty], varEmpty);
     AddSet(TVector3D, 'Z', TVector3D_Write_Z, 0, [varEmpty]);
-=======
->>>>>>> dev
 
     { TStrings }
     AddGet(TStrings, 'Delimiter', TStrings_Read_Delimiter, 0, [varEmpty], varEmpty);
@@ -2074,7 +2068,6 @@ begin
     //AddEvent('RegularExpressionsCore', TPerlRegEx, 'TPerlRegExReplaceEvent');
     //AddHandler('RegularExpressionsCore', 'TNotifyEvent', TJvInterpreterClassesEvent, @TJvInterpreterClassesEvent.NotifyEvent);
     //AddHandler('RegularExpressionsCore', 'TPerlRegExReplaceEvent', TJvInterpreterPerlRegExEvents, @TJvInterpreterPerlRegExEvents.OnReplace);
-    
 
     { JsonDataObjects }
     AddConst('JsonDataObjects', 'jdtNone', Ord(TJsonDataType.jdtNone));

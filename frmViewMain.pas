@@ -66,12 +66,6 @@ uses
 
 const
   DefaultInterval             = 1 / 24 / 6;
-  {$IFDEF WIN64}
-  sLODGenName = 'LODGenx64.exe';
-  {$ELSE}
-  sLODGenName = 'LODGen.exe';
-  {$ENDIF}
-
 
 type
   TDynBooleans = array of Boolean;
@@ -3081,8 +3075,6 @@ var
   MainRecord  : IwbMainRecord;
   Worldspaces : TDynMainRecords;
 begin
-  // TES5LODGen: selective lodgenning, no need to regenerate lod for all worldspaces like in Oblivion
-  if wbGameMode in [gmTES5, gmSSE, gmFO3, gmFNV] then begin
   // xLODGen: selective lodgenning, no need to regenerate lod for all worldspaces like in Oblivion
   if wbGameMode in [gmTES5, gmSSE, gmFO3, gmFNV, gmFO4] then begin
     try
@@ -4530,9 +4522,6 @@ procedure TfrmMain.FormClose(Sender: TObject; var Action: TCloseAction);
         FreeAndNil(fs);
     end;
   end;
-
-var
-  i: Integer;
 
 var
   i: Integer;
@@ -7222,7 +7211,7 @@ begin
         );
       end else
         cbObjectsLOD.Checked := Settings.ReadBool(Section, 'ObjectsLOD', True);
-        
+
       cbBuildAtlas.Checked := Settings.ReadBool(Section, 'BuildAtlas', True);
       cmbAtlasWidth.ItemIndex := IndexOf(cmbAtlasWidth.Items, Settings.ReadString(Section, 'AtlasWidth', IntToStr(iDefaultAtlasWidth)));
       cmbAtlasHeight.ItemIndex := IndexOf(cmbAtlasHeight.Items, Settings.ReadString(Section, 'AtlasHeight', IntToStr(iDefaultAtlasHeight)));
@@ -15020,7 +15009,7 @@ procedure LoaderProgress(const s: string);
 begin
   if s <> '' then
     frmMain.PostAddMessage('[' + FormatDateTime('nn:ss:zzz', Now - wbStartTime) + '] Background Loader: ' + s);
-  if frmMain.ForceTerminate then
+  if wbForceTerminate then
     Abort;
 end;
 
