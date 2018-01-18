@@ -224,9 +224,10 @@ pip-log.txt
 *.identcache
 TES5Dump/*
 FO4Dump/*
-__history/*
-__history
 FO4Dump
+/__history
+__history
+__history/*
 /SSEDump
 SSEDump/*
 DebugLite/

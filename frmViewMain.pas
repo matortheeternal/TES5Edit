@@ -44,6 +44,7 @@ uses
   IOUtils,
   Actions,
   pngimage,
+  RegularExpressionsCore,
   VirtualTrees,
   VTEditors,
   VirtualEditTree,
@@ -65,12 +66,6 @@ uses
 
 const
   DefaultInterval             = 1 / 24 / 6;
-  {$IFDEF WIN64}
-  sLODGenName = 'LODGenx64.exe';
-  {$ELSE}
-  sLODGenName = 'LODGen.exe';
-  {$ENDIF}
-
 
 type
   TDynBooleans = array of Boolean;
@@ -3080,8 +3075,6 @@ var
   MainRecord  : IwbMainRecord;
   Worldspaces : TDynMainRecords;
 begin
-  // TES5LODGen: selective lodgenning, no need to regenerate lod for all worldspaces like in Oblivion
-  if wbGameMode in [gmTES5, gmSSE, gmFO3, gmFNV] then begin
   // xLODGen: selective lodgenning, no need to regenerate lod for all worldspaces like in Oblivion
   if wbGameMode in [gmTES5, gmSSE, gmFO3, gmFNV, gmFO4] then begin
     try
@@ -3169,14 +3162,9 @@ procedure TfrmMain.DoRunScript;
 
 begin
   if wbScriptToRun = '' then
-    wbScriptToRun := wbProgramPath + wbAppName + 'Script.pas';
-
-  {if wbFindCmdLineParam('script', s) and (Length(s) > 0) then begin
-    // relative script name, use app's folder
-    if not TPath.IsPathRooted(s) then
-      s := wbProgramPath + s;
-  end else
-    s := wbProgramPath + wbAppName + 'Script.pas';}
+    wbScriptToRun := wbProgramPath + wbAppName + 'Script.pas'
+  else if not TPath.IsPathRooted(ExtractFilePath(wbScriptToRun)) then
+    wbScriptToRun := wbScriptsPath + wbScriptToRun;
 
   if not FileExists(wbScriptToRun) then
     with TOpenDialog.Create(Self) do try
@@ -3398,6 +3386,7 @@ procedure TfrmMain.DoInit;
             end;
           end;
         end;
+
       end;
 
       {
@@ -3406,6 +3395,20 @@ procedure TfrmMain.DoInit;
          Add files missing in plugins.txt and loadorder.txt for Skyrim and later games.
       }
       AddMissingToLoadList(sl);
+
+      // move Creation Club plugins right after the last ESM
+      if wbGameMode in [gmSSE, gmFO4] then begin
+        for j := Pred(sl.Count) downto 0 do
+          if IsFileESM(sl[j]) then
+            Break;
+        Inc(j);
+        for i := Succ(j) to Pred(sl.Count) do
+          if IsFileCC(sl[i]) then begin
+            AddMessage('Detected Creation Club plugin, forcing it to load after the last ESM: ' + sl[i]);
+            sl.Move(i, j);
+            Inc(j);
+          end;
+      end;
 
       if (wbToolMode in [tmMasterUpdate, tmMasterRestore]) and (sl.Count > 1) and (wbGameMode in [gmFO3, gmFNV]) then begin
         Age := Integer(sl.Objects[0]);
@@ -3526,6 +3529,21 @@ begin
       AddMessage('Fatal: No save path specified');
       Exit;
     end;
+
+  if wbCreationClubContentFileName <> '' then begin
+    wbCreationClubContentFileName := ExtractFilePath(ExcludeTrailingPathDelimiter(wbDataPath)) + wbCreationClubContentFileName;
+    if FileExists(wbCreationClubContentFileName) then begin
+      with TStringList.Create do try
+        LoadFromFile(wbCreationClubContentFileName);
+        SetLength(wbCreationClubContent, Count);
+        for i := 0 to Pred(Count) do
+          wbCreationClubContent[i] := Strings[i];
+      finally
+        Free;
+      end;
+      AddMessage('Using Creation Club Content list: ' + wbCreationClubContentFileName);
+    end;
+  end;
 
   AddMessage('Using plugin list: ' + wbPluginsFileName);
   if not FileExists(wbPluginsFileName) then begin
@@ -3653,6 +3671,13 @@ begin
 
           else if wbToolSource in [tsPlugins] then begin
             sl2 := TStringList.Create;
+
+            // activate Creation Club mods
+            if wbGameMode in [gmFO4, gmSSE] then
+              for i := 0 to Pred(sl.Count) do
+                if IsFileCC(sl[i]) then
+                  sl2.Add(sl[i]);
+
             try
               // check active files using the game's plugins list
               if FileExists(wbPluginsFileName) then
@@ -4497,9 +4522,6 @@ procedure TfrmMain.FormClose(Sender: TObject; var Action: TCloseAction);
         FreeAndNil(fs);
     end;
   end;
-
-var
-  i: Integer;
 
 var
   i: Integer;
@@ -5533,8 +5555,10 @@ var
   StartTick                   : Cardinal;
   jvi                         : TJvInterpreterProgram;
   i, p                        : Integer;
+  s                           : string;
   bCheckUnsaved               : Boolean;
   bShowMessages               : Boolean;
+  regexp                      : TPerlRegEx;
 begin
   // prevent execution of new scripts if already executing
   if Assigned(ScriptEngine) then begin
@@ -5545,6 +5569,32 @@ begin
   if Trim(aScript) = '' then
     Exit;
 
+  // Try to remove namespaces from unit names in uses clause if script is written in newer Delphi version
+  // jvInterpreter doesn't support them (causes syntax error)
+  regexp := TPerlRegEx.Create;
+  try
+    regexp.Subject := aScript;
+    regexp.RegEx := '^\s*uses\s+(.+?);';
+    regexp.Options := [preCaseLess, preSingleLine, preMultiLine];
+    while regexp.MatchAgain do begin
+      i := regexp.MatchedOffset;
+      s := regexp.MatchedText;
+      s := StringReplace(s, 'system.', '', [rfReplaceAll, rfIgnoreCase]);
+      s := StringReplace(s, 'vcl.',    '', [rfReplaceAll, rfIgnoreCase]);
+      s := StringReplace(s, 'winapi.', '', [rfReplaceAll, rfIgnoreCase]);
+      s := StringReplace(s, 'data.',   '', [rfReplaceAll, rfIgnoreCase]);
+      s := StringReplace(s, 'web.',    '', [rfReplaceAll, rfIgnoreCase]);
+      if s <> regexp.MatchedText then begin
+        aScript := Copy(aScript, 1, i-1) + s + Copy(aScript, i + Length(regexp.MatchedText), Length(aScript));
+        regexp.Subject := aScript;
+      end;
+      regexp.Start := i + Length(s);
+    end;
+  finally
+    regexp.Free;
+  end;
+
+  // check for the Silent mode keyword
   p := Pos('Mode:', aScript);
   bShowMessages := not ContainsText(Copy(aScript, p, PosEx(#10, aScript, p) - p), 'Silent');
 
@@ -5585,6 +5635,8 @@ begin
         end;
       end;
 
+      // skip selected records iteration if Process() function doesn't exist
+      if jvi.FunctionExists('', 'Process') then
       for i := Low(Selection) to High(Selection) do begin
         StartNode := Selection[i];
         if Assigned(StartNode) then begin
@@ -5599,16 +5651,11 @@ begin
 
           if Assigned(NodeData.Element) then
             if NodeData.Element.ElementType in ScriptProcessElements then begin
-
-              if jvi.FunctionExists('', 'Process') then begin
-                jvi.CallFunction('Process', nil, [NodeData.Element]);
-                if jvi.VResult <> 0 then begin
-                  if bShowMessages then PostAddMessage(sTerminated + IntToStr(jvi.VResult));
-                  Exit;
-                end;
-              end else
-                Break;
-
+              jvi.CallFunction('Process', nil, [NodeData.Element]);
+              if jvi.VResult <> 0 then begin
+                if bShowMessages then PostAddMessage(sTerminated + IntToStr(jvi.VResult));
+                Exit;
+              end;
               Inc(Count);
             end;
 
@@ -7168,7 +7215,7 @@ begin
         );
       end else
         cbObjectsLOD.Checked := Settings.ReadBool(Section, 'ObjectsLOD', True);
-        
+
       cbBuildAtlas.Checked := Settings.ReadBool(Section, 'BuildAtlas', True);
       cmbAtlasWidth.ItemIndex := IndexOf(cmbAtlasWidth.Items, Settings.ReadString(Section, 'AtlasWidth', IntToStr(iDefaultAtlasWidth)));
       cmbAtlasHeight.ItemIndex := IndexOf(cmbAtlasHeight.Items, Settings.ReadString(Section, 'AtlasHeight', IntToStr(iDefaultAtlasHeight)));
@@ -7190,7 +7237,7 @@ begin
       edLODX.Text := Settings.ReadString(Section, 'LODX', '');
       edLODY.Text := Settings.ReadString(Section, 'LODY', '');
       cbTreesLOD.Checked := Settings.ReadBool(Section, 'TreesLOD', True);
-      cbTrees3D.Checked := Settings.ReadBool(Section, 'Trees3D', wbGameMode in [gmSSE]);
+      cbTrees3D.Checked := Settings.ReadBool(Section, 'Trees3D', False {wbGameMode in [gmSSE]});
       cmbTreesLODBrightness.ItemIndex := IndexOf(cmbTreesLODBrightness.Items, Settings.ReadString(Section, 'TreesBrightness', '0'));
       if wbGameMode in [gmFO4] then begin
         cbTreesLOD.Checked := False;
@@ -7199,7 +7246,7 @@ begin
         cbUseBacklightPower.Visible := True;
       end else
       // hidden option to split trees lod atlases when Shift is pressed
-      if GetAsyncKeyState(VK_SHIFT) <> 0 then begin
+      if GetKeyState(VK_SHIFT) < 0 then begin
         _Files := @Files;
         btnSplitTreesLOD.Visible := True;
       end;
@@ -14688,20 +14735,54 @@ begin
   end;
 end;
 
+
+type
+  PUnitInfo = ^TUnitInfo;
+  TUnitInfo = record
+    UnitName: string;
+    Found: PBoolean;
+  end;
+
+procedure HasUnitProc(const Name: string; NameType: TNameType; Flags: Byte; Param: Pointer);
+begin
+  case NameType of
+    ntContainsUnit:
+      with PUnitInfo(Param)^ do
+        if SameText(Name, UnitName) then
+          Found^ := True;
+  end;
+end;
+
+function IsUnitCompiledIn(Module: HMODULE; const UnitName: string): Boolean;
+var
+  Info: TUnitInfo;
+  Flags: Integer;
+begin
+  Result := False;
+  Info.UnitName := UnitName;
+  Info.Found := @Result;
+  GetPackageInfo(Module, @Info, Flags, HasUnitProc);
+end;
+
 procedure TfrmMain.JvInterpreterProgram1GetUnitSource(UnitName: string;
   var Source: string; var Done: Boolean);
 var
-  sl: TStringList;
   UnitFile: string;
 begin
+  // return empty unit source code if the standard one is used
+  if SameText(UnitName, 'xEditAPI') or SameText(UnitName, 'UITypes') or IsUnitCompiledIn(HInstance, UnitName) then begin
+    Source := 'unit ' + UnitName + '; end.';
+    Done := True;
+    Exit;
+  end;
+
   UnitFile := wbScriptsPath + UnitName + '.pas';
-  sl := TStringList.Create;
-  try
-    sl.LoadFromFile(UnitFile);
-    Source := sl.Text;
+  with TStringList.Create do try
+    LoadFromFile(UnitFile);
+    Source := Text;
     Done := True;
   finally
-    sl.Free;
+    Free;
   end;
 end;
 
@@ -14930,7 +15011,7 @@ procedure LoaderProgress(const s: string);
 begin
   if s <> '' then
     frmMain.PostAddMessage('[' + FormatDateTime('nn:ss:zzz', Now - wbStartTime) + '] Background Loader: ' + s);
-  if frmMain.ForceTerminate then
+  if wbForceTerminate then
     Abort;
 end;
 

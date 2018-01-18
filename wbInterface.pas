@@ -27,7 +27,7 @@ const
   VersionString  = '3.2.1';
   clOrange       = $004080FF;
   wbFloatDigits  = 6;
-  wbHardcodedDat = '.Hardcoded.keep.this.with.the.exe.and.otherwise.ignore.it.I.really.mean.it.dat';
+  wbHardcodedDat = '.Hardcoded.dat';
 
 type
   TwbProgressCallback = procedure(const aStatus: string);
@@ -74,7 +74,7 @@ var
   wbResolveAlias           : Boolean  = True;
   wbActorTemplateHide      : Boolean  = True;
   wbClampFormID            : Boolean  = True;
-  wbAllowSlowSearching     : Boolean  = False;
+  wbAllowSlowSearching     : Boolean  = True;
   wbSortOnDemand           : Boolean  = True;
   wbAllowErrors            : Boolean  = True;
   wbDoNotBuildRefsFor      : TStringList;
@@ -132,6 +132,10 @@ var
   wbMyGamesTheGamePath : string;
   wbTheGameIniFileName : string;
 
+  wbCreationClubContentFileName : string;
+  wbCreationClubContent: array of string;
+  wbOfficialDLC        : array of string;
+
   wbShouldLoadMOHookFile : Boolean;
   wbMOProfile            : string;
   wbMOHookFile           : string;
@@ -180,7 +184,7 @@ type
     caOverride,
     caConflict,
     caConflictCritical
-    );
+  );
 
   TByteSet = set of Byte;
   TConflictAllSet = set of TConflictAll;
@@ -199,7 +203,7 @@ type
     ctIdenticalToMasterWinsConflict,
     ctConflictWins,
     ctConflictLoses
-    );
+  );
 
   TConflictThisSet = set of TConflictThis;
   TConflictThisColors = array[TConflictThis] of TColor;
@@ -408,7 +412,8 @@ type
     esDestroying,
     esChangeNotified,
     esModifiedUpdated,
-    esSorting
+    esSorting,
+    esFilterShow
   );
 
   TwbElementStates = set of TwbElementState;
@@ -498,6 +503,7 @@ type
 
     procedure Hide;
     procedure Show;
+    procedure Filter(show: Boolean);
     function GetIsHidden: Boolean;
 
     procedure MoveUp;
@@ -760,7 +766,8 @@ type
     fsIsHardcoded,
     fsIsGameMaster,
     fsIsTemporary,
-    fsHasNoFormID
+    fsHasNoFormID,
+    fsIsEditable
   );
 
   TwbFileStates = set of TwbFileState;
@@ -772,9 +779,12 @@ type
   IwbFile = interface(IwbContainer)
     ['{38AA15A6-F652-45C7-B875-9CB502E5DA92}']
     function GetFileName: string;
+    procedure SetFileName(const aNewName: string);
     function GetUnsavedSince: TDateTime;
     function GetMaster(aIndex: Integer): IwbFile;
     function GetMasterCount: Integer;
+    function FindEditorID(const aEditorID: String; var rec: IwbMainRecord): Boolean;
+    function FindName(const aName: String; var rec: IwbMainRecord): Boolean;
     function GetRecordByFormID(aFormID: Cardinal; aAllowInjected: Boolean): IwbMainRecord;
     function GetRecordByEditorID(const aEditorID: string): IwbMainRecord;
     function GetRecordByName(const aName: string): IwbMainRecord;
@@ -784,6 +794,7 @@ type
     function HasGroup(const aSignature: TwbSignature): Boolean;
     function GetFileStates: TwbFileStates;
     procedure BuildReachable;
+    procedure SetIsEditable(state: Boolean);
 
     function LoadOrderFormIDtoFileFormID(aFormID: Cardinal): Cardinal;
     function FileFormIDtoLoadOrderFormID(aFormID: Cardinal): Cardinal;
@@ -824,7 +835,8 @@ type
     function NamesSorted(aSignature: String): Boolean;
 
     property FileName: string
-      read GetFileName;
+      read GetFileName
+      write SetFileName;
     property UnsavedSince: TDateTime
       read GetUnsavedSince;
 
@@ -3269,8 +3281,6 @@ var
   wbTerminator        : Byte = Ord('|');
   wbPlayerRefID       : Cardinal = $14;
   wbChangedFormOffset : Integer = 10000;
-  wbOfficialDLC       : array of string;
-  wbOfficialCC        : array of string;
 
 type
   {$IFDEF WIN32}
@@ -11894,11 +11904,21 @@ begin
 end;
 
 procedure TwbByteArrayDef.FromNativeValue(aBasePtr, aEndPtr: Pointer; const aElement: IwbElement; const aValue: Variant);
+const
+  vtBytes = 8209;
 var
   Bytes  : TBytes;
   Prefix : Integer;
 begin
-  Bytes := aValue;
+  if VarType(aValue) <> vtBytes then begin
+    SetLength(Bytes, 4);
+    Bytes[0] := Cardinal(aValue) shr 24;
+    Bytes[1] := Cardinal(aValue) shr 16;
+    Bytes[2] := Cardinal(aValue) shr 8;
+    Bytes[3] := Cardinal(aValue);
+  end
+  else
+    Bytes := aValue;
 
   case badSize of
     -1 : Prefix := SizeOf(Cardinal);

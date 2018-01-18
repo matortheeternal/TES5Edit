@@ -2648,7 +2648,7 @@ begin
     Element := Container.ElementByName['Type'];
     if Assigned(Element) then begin
       EValue := Element.Value;
-      if EValue = 'MODS' then Result := 1
+           if EValue = 'MODS' then Result := 1
       else if EValue = 'LMOD' then Result := 2
   // Everything from here is copied from SKSE and totally unverrified
       else if EValue = 'REGS' then Result := 3

@@ -2384,19 +2384,6 @@ begin
     end;
 end;
 
-function wbSPGDFormatDecider(aBasePtr: Pointer; aEndPtr: Pointer; const aElement: IwbElement): Integer;
-var
-  MainRecord: IwbMainRecord;
-begin
-  Result := 0;
-  if not Assigned(aElement) then
-    Exit;
-  if not Supports(aElement.Container, IwbMainRecord, MainRecord) then
-    Exit;
-  if MainRecord.Version < 44 then
-    Result := 1;
-end;
-
 
 {>>> For VMAD <<<}
 function wbScriptObjFormatDecider(aBasePtr: Pointer; aEndPtr: Pointer; const aElement: IwbElement): Integer;
@@ -2678,7 +2665,7 @@ type
 
 const
   {>> N means New, V means verified that the name has not changed <<<}
-  wbCTDAFunctions : array[0..399] of TCTDAFunction = (
+  wbCTDAFunctions : array[0..401] of TCTDAFunction = (
 {N} (Index:   0; Name: 'GetWantBlocking'),
 {V} (Index:   1; Name: 'GetDistance'; ParamType1: ptObjectReference),
 {V} (Index:   5; Name: 'GetLocked'),
@@ -3074,6 +3061,8 @@ const
 {N} (Index: 731; Name: 'CanFlyHere'),
 {N} (Index: 732; Name: 'IsFlyingMountPatrolQueud'),
 {N} (Index: 733; Name: 'IsFlyingMountFastTravelling'),
+{N} (Index: 734; Name: 'IsOverEncumbered'),
+{N} (Index: 735; Name: 'GetActorWarmth'),
 
     // Added by SKSE
     (Index: 1024; Name: 'GetSKSEVersion'; ),
@@ -5357,91 +5346,6 @@ begin
     wbString(ATKE, 'Attack Event')
   ], []);
 
-  wbVMADFragmentedPACK := wbStruct(VMAD, 'Virtual Machine Adapter', [
-    wbInteger('Version', itS16, nil, cpIgnore),
-    wbInteger('Object Format', itS16, nil, cpIgnore),
-    wbArrayS('Scripts', wbScriptEntry, -2, cpNormal, False, nil, nil, nil, False),
-    wbScriptFragmentsPack
-  ], cpNormal, False, nil, 3);
-
-  wbVMADFragmentedQUST := wbStruct(VMAD, 'Virtual Machine Adapter', [
-    wbInteger('Version', itS16, nil, cpIgnore),
-    wbInteger('Object Format', itS16, nil, cpIgnore),
-    wbArrayS('Scripts', wbScriptEntry, -2, cpNormal, False, nil, nil, nil, False),
-    wbScriptFragmentsQuest,
-    wbArrayS('Aliases', wbStructSK([0], 'Alias', [
-      wbScriptPropertyObject,
-      wbInteger('Version', itS16, nil, cpIgnore),
-      wbInteger('Object Format', itS16, nil, cpIgnore),
-	    wbArrayS('Alias Scripts', wbScriptEntry, -2)
-	  ]), -2)
-  ], cpNormal, False, nil, 3);
-
-  wbVMADFragmentedSCEN := wbStruct(VMAD, 'Virtual Machine Adapter', [
-    wbInteger('Version', itS16, nil, cpIgnore),
-    wbInteger('Object Format', itS16, nil, cpIgnore),
-    wbArrayS('Scripts', wbScriptEntry, -2, cpNormal, False, nil, nil, nil, False),
-    wbScriptFragmentsScen
-  ], cpNormal, False, nil, 3);
-
-  wbVMADFragmentedINFO := wbStruct(VMAD, 'Virtual Machine Adapter', [
-    wbInteger('Version', itS16, nil, cpIgnore),
-    wbInteger('Object Format', itS16, nil, cpIgnore),
-    wbArrayS('Scripts', wbScriptEntry, -2, cpNormal, False, nil, nil, nil, False),
-    wbScriptFragmentsInfo
-  ], cpNormal, False, nil, 3);
-
-
-  wbAttackData := wbRStructSK([1], 'Attack', [
-    wbStruct(ATKD, 'Attack Data', [
-      wbFloat('Damage Mult'),
-      wbFloat('Attack Chance'),
-      wbFormIDCk('Attack Spell', [SPEL, SHOU, NULL]),
-      wbInteger('Attack Flags', itU32, wbFlags([
-        {0x00000001} 'Ignore Weapon',
-        {0x00000002} 'Bash Attack',
-        {0x00000004} 'Power Attack',
-        {0x00000008} 'Left Attack',
-        {0x00000010} 'Rotating Attack',
-        {0x00000020} 'Unknown 5',
-        {0x00000040} 'Unknown 6',
-        {0x00000080} 'Unknown 7',
-        {0x00000100} 'Unknown 8',
-        {0x00000200} 'Unknown 9',
-        {0x00000400} 'Unknown 10',
-        {0x00000800} 'Unknown 11',
-        {0x00001000} 'Unknown 12',
-        {0x00002000} 'Unknown 13',
-        {0x00004000} 'Unknown 14',
-        {0x00008000} 'Unknown 15',
-        {0x00010000} 'Unknown 16',
-        {0x00020000} 'Unknown 17',
-        {0x00040000} 'Unknown 18',
-        {0x00080000} 'Unknown 19',
-        {0x00100000} 'Unknown 20',
-        {0x00200000} 'Unknown 21',
-        {0x00400000} 'Unknown 22',
-        {0x00800000} 'Unknown 23',
-        {0x01000000} 'Unknown 24',
-        {0x02000000} 'Unknown 25',
-        {0x04000000} 'Unknown 26',
-        {0x08000000} 'Unknown 27',
-        {0x10000000} 'Unknown 28',
-        {0x20000000} 'Unknown 29',
-        {0x40000000} 'Unknown 30',
-        {0x80000000} 'Override Data'
-      ])),
-      wbFloat('Attack Angle'),
-      wbFloat('Strike Angle'),
-      wbFloat('Stagger'),
-      wbFormIDCk('Attack Type', [KYWD, NULL]),
-      wbFloat('Knockdown'),
-      wbFloat('Recovery Time'),
-      wbFloat('Stamina Mult')
-    ]),
-    wbString(ATKE, 'Attack Event')
-  ], []);
-
   wbPLDT := wbStruct(PLDT, 'Location', [
     wbInteger('Type', itS32, wbLocationEnum),
     wbUnion('Location Value', wbTypeDecider, [
@@ -5616,7 +5520,7 @@ begin
     ]),
   -1);
 
-  wbDEST := wbRStruct('Destructable', [
+  wbDEST := wbRStruct('Destructible', [
     wbStruct(DEST, 'Header', [
       wbInteger('Health', itS32),
       wbInteger('DEST Count', itU8),
@@ -5650,7 +5554,7 @@ begin
     )
   ], [], cpNormal, False, nil);
 
-  wbDESTActor := wbRStruct('Destructable', [
+  wbDESTActor := wbRStruct('Destructible', [
     wbStruct(DEST, 'Header', [
       wbInteger('Health', itS32),
       wbInteger('Count', itU8),
@@ -7160,55 +7064,23 @@ begin
 
   wbRecord(SPGD, 'Shader Particle Geometry', [
     wbEDID,
-    // FO4 SPGD format for Form Version 44
-    wbUnion(DATA, '', wbSPGDFormatDecider, [
-      wbStruct('Data', [
-        wbFloat('Gravity Velocity'),
-        wbByteArray('Unknown', 4),
-        wbFloat('Rotation Velocity'),
-        wbByteArray('Unknown', 4),
-        wbFloat('Particle Size X'),
-        wbFloat('Center Offset Min'),
-        wbFloat('Particle Size Y'),
-        wbByteArray('Unknown', 4),
-        wbFloat('Center Offset Min'),
-        wbByteArray('Unknown', 4),
-        wbFloat('Center Offset Max'),
-        wbByteArray('Unknown', 4),
-        wbFloat('Initial Rotation'),
-        wbByteArray('Unknown', 4),
-        wbInteger('# of Subtextures X', itU32),
-        wbByteArray('Unknown', 4),
-        wbInteger('# of Subtextures Y', itU32),
-        wbByteArray('Unknown', 4),
-        wbInteger('Type', itU32, wbEnum([
-          'Rain',
-          'Snow'
-        ])),
-        wbByteArray('Unknown', 4),
-        wbInteger('Box Size', itU32),
-        wbByteArray('Unknown', 4),
-        wbFloat('Particle Density'),
-        wbByteArray('Unknown', 4)
-      ], cpNormal, True),
-      wbStruct('Data', [
-        wbFloat('Gravity Velocity'),
-        wbFloat('Rotation Velocity'),
-        wbFloat('Particle Size X'),
-        wbFloat('Particle Size Y'),
-        wbFloat('Center Offset Min'),
-        wbFloat('Center Offset Max'),
-        wbFloat('Initial Rotation Range'),
-        wbInteger('# of Subtextures X', itU32),
-        wbInteger('# of Subtextures Y', itU32),
-        wbInteger('Type', itU32, wbEnum([
-          'Rain',
-          'Snow'
-        ])),
-        wbInteger('Box Size', itU32),
-        wbFloat('Particle Density')
-      ], cpNormal, True, nil, 10)
-    ]),
+    wbStruct(DATA, 'Data', [
+      wbFloat('Gravity Velocity'),
+      wbFloat('Rotation Velocity'),
+      wbFloat('Particle Size X'),
+      wbFloat('Particle Size Y'),
+      wbFloat('Center Offset Min'),
+      wbFloat('Center Offset Max'),
+      wbFloat('Initial Rotation Range'),
+      wbInteger('# of Subtextures X', itU32),
+      wbInteger('# of Subtextures Y', itU32),
+      wbInteger('Type', itU32, wbEnum([
+        'Rain',
+        'Snow'
+      ])),
+      wbInteger('Box Size', itU32),
+      wbFloat('Particle Density')
+    ], cpNormal, True, nil, 10),
     wbString(ICON, 'Particle Texture')
   ]);
 
@@ -8203,7 +8075,7 @@ begin
         {0x08} 'Inherit Radius from Spawn Spell',
         {0x10} 'Drop to Ground'
       ])),
-      wbFormIDCk('Spell', [SPEL, NULL]),
+      wbFormIDCk('Spell', [SPEL, ENCH, NULL]),
       wbFormIDCk('Light', [LIGH, NULL]),
       wbFormIDCk('Impact Data Set', [IPDS, NULL]),
       wbFormIDCk('Sound', [SNDR, NULL])
@@ -9918,7 +9790,7 @@ begin
         'Ally',
         'Confidant',
         'Friend',
-        'Acquaitance',
+        'Acquaintance',
         'Rival',
         'Foe',
         'Enemy',
@@ -13761,6 +13633,8 @@ begin
     wbOfficialDLC[0] := 'Dawnguard.esm';
     wbOfficialDLC[1] := 'HearthFires.esm';
     wbOfficialDLC[2] := 'Dragonborn.esm';
+
+    wbCreationClubContentFileName := 'Skyrim.ccc';
   end;
 
 end;

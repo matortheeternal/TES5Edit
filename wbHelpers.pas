@@ -28,6 +28,7 @@ uses
   ShlObj,
   IniFiles,
   Registry,
+  RegularExpressionsCore,
   wbInterface,
   Imaging,
   ImagingTypes;
@@ -90,6 +91,7 @@ function FindMatchText(Strings: TStrings; const Str: string): Integer;
 function IsFileESM(const aFileName: string): Boolean;
 function IsFileESP(const aFileName: string): Boolean;
 function IsFileESL(const aFileName: string): Boolean;
+function IsFileCC(const aFileName: string): Boolean;
 procedure DeleteDirectory(const DirName: string);
 function FullPathToFilename(aString: string): string;
 procedure wbFlipBitmap(aBitmap: TBitmap; MirrorType: Integer); // MirrorType: 1 - horizontal, 2 - vertical, 0 - both
@@ -156,6 +158,7 @@ function HasBSAs(ModName, DataPath: String; Exact, modini: Boolean; var bsaNames
 implementation
 
 uses
+  StrUtils,
   wbSort;
 
 procedure wbLeveledListCheckCircular(const aMainRecord: IwbMainRecord; aStack: PnxLeveledListCheckCircularStack);
@@ -163,11 +166,12 @@ var
   Stack    : TnxLeveledListCheckCircularStack;
   s          : string;
   CER        : IwbContainerElementRef;
-  LLE        : IwbContainerElementRef;
+  Entries    : IwbContainerElementRef;
+  Entry      : IwbContainerElementRef;
   i          : Integer;
-  LVLO       : IwbContainerElementRef;
-  Reference  : IwbContainerElementRef;
+  Reference  : IwbElement;
   MainRecord : IwbMainRecord;
+  RefPath    : string;
 begin
   Stack.rllcLast := aStack;
   Stack.rllcMainRecord := aMainRecord;
@@ -193,11 +197,16 @@ begin
     Exit;
   aMainRecord.Tag;
 
+  if wbGameMode = gmTES4 then
+    RefPath := 'Reference'
+  else
+    RefPath := 'LVLO\Reference';
+
   if Supports(aMainRecord, IwbContainerElementRef, CER) then begin
-    if Supports(CER.ElementByName['Leveled List Entries'], IwbContainerElementRef, LLE) then begin
-      for i := 0 to Pred(LLE.ElementCount) do
-        if Supports(LLE.Elements[i], IwbContainerElementRef, LVLO) then begin
-          if Supports(LVLO.ElementByName['Reference'], IwbContainerElementRef, Reference) then begin
+    if Supports(CER.ElementByName['Leveled List Entries'], IwbContainerElementRef, Entries) then begin
+      for i := 0 to Pred(Entries.ElementCount) do
+        if Supports(Entries.Elements[i], IwbContainerElementRef, Entry) then begin
+          if Supports(Entry.ElementByPath[RefPath], IwbElement, Reference) then begin
             if Supports(Reference.LinksTo, IwbMainRecord, MainRecord) then begin
               if (MainRecord.Signature = aMainRecord.Signature) then begin
                 MainRecord := MainRecord.WinningOverride;
@@ -424,6 +433,23 @@ const
 begin
   Result := SameText(ExtractFileExt(aFileName), '.esl') or
     SameText(Copy(aFileName, Length(aFileName) - Length(ghostesl) + 1, Length(ghostesl)), ghostesl)
+end;
+
+function IsFileCC(const aFileName: string): Boolean;
+const
+  ccFileMask = 'cc([a-z]{3})(sse|fo4)(\d{3})\-(\S+)\.(esp|esm|esl)';
+begin
+  if Length(wbCreationClubContent) <> 0 then
+    Result := MatchText(aFileName, wbCreationClubContent)
+  else
+  with TPerlRegEx.Create do try
+    Subject := aFileName;
+    RegEx := ccFileMask;
+    Options := [preCaseLess, preSingleLine];
+    Result := MatchAgain;
+  finally
+    Free;
+  end;
 end;
 
 procedure DeleteDirectory(const DirName: string);
@@ -1308,6 +1334,7 @@ begin
   end else
     RaiseLastOSError;
 end;
+
 
 
 initialization

@@ -14,6 +14,7 @@ uses
   Graphics,
   Classes,
   SysUtils,
+  StrUtils,
   Variants,
   Controls,
   StdCtrls,
@@ -47,6 +48,101 @@ begin
   CallFunction(nil, [O2V(Sender)]);
 end;}
 
+{ StrUtils }
+
+procedure JvInterpreter_ContainsStr(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.ContainsStr(String(Args.Values[0]), String(Args.Values[1]));
+end;
+
+procedure JvInterpreter_ContainsText(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.ContainsText(String(Args.Values[0]), String(Args.Values[1]));
+end;
+
+procedure JvInterpreter_DupeString(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.DupeString(String(Args.Values[0]), Integer(Args.Values[1]));
+end;
+
+procedure JvInterpreter_EndsStr(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.EndsStr(String(Args.Values[0]), String(Args.Values[1]));
+end;
+
+procedure JvInterpreter_EndsText(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.EndsText(String(Args.Values[0]), String(Args.Values[1]));
+end;
+
+procedure JvInterpreter_IfThen(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  if VarType(Args.Values[1]) = VarType(Args.Values[2]) then
+    case VarType(Args.Values[1]) of
+      varString  : Value := StrUtils.IfThen(Boolean(Args.Values[0]), String(Args.Values[1]), String(Args.Values[2]));
+      varUString : Value := StrUtils.IfThen(Boolean(Args.Values[0]), UTF8String(Args.Values[1]), UTF8String(Args.Values[2]));
+      varInteger : Value := Math.IfThen(Boolean(Args.Values[0]), Integer(Args.Values[1]), Integer(Args.Values[2]));
+      varSingle  : Value := Math.IfThen(Boolean(Args.Values[0]), Single(Args.Values[1]), Single(Args.Values[2]));
+      varDouble  : Value := Math.IfThen(Boolean(Args.Values[0]), Double(Args.Values[1]), Double(Args.Values[2]));
+    end
+  else
+    if Boolean(Args.Values[0]) then
+      Value := Variant(Args.Values[1])
+    else
+      Value := Variant(Args.Values[2]);
+end;
+
+procedure JvInterpreter_LeftStr(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.LeftStr(String(Args.Values[0]), Integer(Args.Values[1]));
+end;
+
+procedure JvInterpreter_MidStr(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.MidStr(String(Args.Values[0]), Integer(Args.Values[1]), Integer(Args.Values[2]));
+end;
+
+procedure JvInterpreter_ReverseString(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.ReverseString(String(Args.Values[0]));
+end;
+
+procedure JvInterpreter_RightStr(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.RightStr(String(Args.Values[0]), Integer(Args.Values[1]));
+end;
+
+procedure JvInterpreter_StartsStr(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.StartsStr(String(Args.Values[0]), String(Args.Values[1]));
+end;
+
+procedure JvInterpreter_StartsText(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.StartsText(String(Args.Values[0]), String(Args.Values[1]));
+end;
+
+procedure JvInterpreter_SplitString(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.SplitString(String(Args.Values[0]), String(Args.Values[1]));
+end;
+
+procedure JvInterpreter_StuffString(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := StrUtils.StuffString(String(Args.Values[0]), Cardinal(Args.Values[1]), Cardinal(Args.Values[2]), String(Args.Values[3]));
+end;
+
+{ Variants }
+
+procedure JvInterpreter_VarType(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := VarType(Variant(Args.Values[0]));
+end;
+
+procedure JvInterpreter_VarTypeAsText(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := VarTypeAsText(VarType(Variant(Args.Values[0])));
+end;
 
 { Missing code }
 
@@ -91,6 +187,10 @@ begin
   Value := Ceil(Extended(Args.Values[0]));
 end;
 
+{ Strings }
+
+
+
 
 { TEncoding }
 
@@ -117,6 +217,25 @@ end;
 
 
 { Math }
+
+procedure JvInterpreter_InRange(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  case VarType(Args.Values[0]) of
+    varInteger : Value := Math.InRange(Integer(Args.Values[0]), Integer(Args.Values[1]), Integer(Args.Values[2]));
+    varSingle  : Value := Math.InRange(Single(Args.Values[0]), Single(Args.Values[1]), Single(Args.Values[2]));
+    varDouble  : Value := Math.InRange(Double(Args.Values[0]), Double(Args.Values[1]), Double(Args.Values[2]));
+  end;
+end;
+
+procedure JvInterpreter_RandomRange(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := Math.RandomRange(Integer(Args.Values[0]), Integer(Args.Values[1]));
+end;
+
+procedure JvInterpreter_RoundTo(var Value: Variant; Args: TJvInterpreterArgs);
+begin
+  Value := Math.RoundTo(Extended(Args.Values[0]), Math.TRoundToEXRangeExtended(Args.Values[1]));
+end;
 
 procedure JvInterpreter_Max(var Value: Variant; Args: TJvInterpreterArgs);
 begin
@@ -220,6 +339,7 @@ procedure TStrings_Write_ValueFromIndex(const Value: Variant; Args: TJvInterpret
 begin
   TStrings(Args.Obj).ValueFromIndex[Args.Values[0]] := Value;
 end;
+
 
 
 { TStringList }
@@ -1591,12 +1711,37 @@ end;
 
 
 
->>>>>>> dev
 
 
 procedure RegisterJvInterpreterAdapter(JvInterpreterAdapter: TJvInterpreterAdapter);
 begin
   with JvInterpreterAdapter do begin
+    AddConst('System', 'varEmpty', Ord(varEmpty));
+    AddConst('System', 'varNull', Ord(varNull));
+    AddConst('System', 'varSmallInt', Ord(varSmallInt));
+    AddConst('System', 'varInteger', Ord(varInteger));
+    AddConst('System', 'varSingle', Ord(varSingle));
+    AddConst('System', 'varDouble', Ord(varDouble));
+    AddConst('System', 'varCurrency', Ord(varCurrency));
+    AddConst('System', 'varDate', Ord(varDate));
+    AddConst('System', 'varOleStr', Ord(varOleStr));
+    AddConst('System', 'varDispatch', Ord(varDispatch));
+    AddConst('System', 'varError', Ord(varError));
+    AddConst('System', 'varBoolean', Ord(varBoolean));
+    AddConst('System', 'varVariant', Ord(varVariant));
+    AddConst('System', 'varUnknown', Ord(varUnknown));
+    AddConst('System', 'varShortInt', Ord(varShortInt));
+    AddConst('System', 'varByte', Ord(varByte));
+    AddConst('System', 'varWord', Ord(varWord));
+    AddConst('System', 'varLongWord', Ord(varLongWord));
+    AddConst('System', 'varInt64', Ord(varInt64));
+    AddConst('System', 'varUInt64', Ord(varUInt64));
+    AddConst('System', 'varStrArg', Ord(varStrArg));
+    AddConst('System', 'varString', Ord(varString));
+    AddConst('System', 'varAny', Ord(varAny));
+    AddConst('System', 'varUString', Ord(varUString));
+    AddConst('System', 'varTypeMask', Ord(varTypeMask));
+    AddConst('System', 'varByRef', Ord(varByRef));
     AddConst('System', 'MaxInt', Ord(MaxInt));
     AddConst('System', 'MinInt', Low(Integer));
     AddConst('SysUtils', 'rfReplaceAll', Ord(rfReplaceAll));
@@ -1634,6 +1779,27 @@ begin
     AddConst('Windows', 'SW_SHOWNOACTIVATE', Ord(SW_SHOWNOACTIVATE));
     AddConst('Windows', 'SW_SHOWNORMAL', Ord(SW_SHOWNORMAL));
 
+    { StrUtils }
+    AddFunction('StrUtils', 'ContainsStr', JvInterpreter_ContainsStr, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction('StrUtils', 'ContainsText', JvInterpreter_ContainsText, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction('StrUtils', 'DupeString', JvInterpreter_DupeString, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction('StrUtils', 'EndsStr', JvInterpreter_EndsStr, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction('StrUtils', 'EndsText', JvInterpreter_EndsText, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction('StrUtils', 'IfThen', JvInterpreter_IfThen, 3, [varEmpty, varEmpty, varEmpty], varEmpty);
+    AddFunction('StrUtils', 'LeftStr', JvInterpreter_LeftStr, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction('StrUtils', 'MidStr', JvInterpreter_MidStr, 3, [varEmpty, varEmpty, varEmpty], varEmpty);
+    AddFunction('StrUtils', 'ReverseString', JvInterpreter_ReverseString, 1, [varEmpty], varEmpty);
+    AddFunction('StrUtils', 'RightStr', JvInterpreter_RightStr, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction('StrUtils', 'StartsStr', JvInterpreter_StartsStr, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction('StrUtils', 'StartsText', JvInterpreter_StartsText, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction('StrUtils', 'SplitString', JvInterpreter_SplitString, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction('StrUtils', 'StuffString', JvInterpreter_StuffString, 4, [varEmpty, varEmpty, varEmpty, varEmpty], varEmpty);
+
+    { Variants }
+    AddFunction('Variants', 'VarType', JvInterpreter_VarType, 1, [varEmpty], varEmpty);
+    AddFunction('Variants', 'VarTypeAsText', JvInterpreter_VarTypeAsText, 1, [varEmpty], varEmpty);
+
+    { SysUtils }
     AddFunction('SysUtils', 'Inc', JvInterpreter_Inc, 1, [varByRef], varEmpty);
     AddFunction('SysUtils', 'Dec', JvInterpreter_Dec, 1, [varByRef], varEmpty);
     AddFunction('SysUtils', 'Succ', JvInterpreter_Succ, 1, [varEmpty], varEmpty);
@@ -1660,10 +1826,7 @@ begin
     AddFunction('ShellApi', 'ShellExecuteWait', JvInterpreter_ShellExecuteWait, 6, [varEmpty, varEmpty, varEmpty, varEmpty, varEmpty, varEmpty], varEmpty);
     AddFunction('Windows', 'CreateProcessWait', JvInterpreter_CreateProcessWait, 4, [varEmpty, varEmpty, varEmpty, varEmpty], varEmpty);
     AddFunction('Windows', 'Sleep', JvInterpreter_Sleep, 1, [varEmpty], varEmpty);
-<<<<<<< HEAD
-=======
     AddFunction('Windows', 'GetKeyState', JvInterpreter_GetKeyState, 1, [varEmpty], varEmpty);
->>>>>>> dev
     AddFunction('FileCtrl', 'SelectDirectory', JvInterpreter_SelectDirectory, 4, [varEmpty, varEmpty, varEmpty, varEmpty], varEmpty);
 
     { TEncoding }
@@ -1674,11 +1837,14 @@ begin
     AddGet(TEncoding, 'UTF8', TEncoding_UTF8, 0, [varEmpty], varEmpty);
 
     { Math }
+    AddFunction('Math', 'InRange', JvInterpreter_InRange, 3, [varEmpty, varEmpty, varEmpty], varEmpty);
+    AddFunction('Math', 'RandomRange', JvInterpreter_RandomRange, 2, [varEmpty, varEmpty], varEmpty);
+    AddFunction('Math', 'RoundTo', JvInterpreter_RoundTo, 2, [varEmpty, varEmpty], varEmpty);
+
     AddFunction('Math', 'Max', JvInterpreter_Max, 2, [varEmpty, varEmpty], varEmpty);
     AddFunction('Math', 'Min', JvInterpreter_Min, 2, [varEmpty, varEmpty], varEmpty);
     AddFunction('Math', 'IntPower', JvInterpreter_IntPower, 2, [varEmpty,varEmpty], varEmpty);
     AddFunction('Math', 'Power', JvInterpreter_Power, 2, [varEmpty,varEmpty], varEmpty);
-<<<<<<< HEAD
 
     { TVector3D }
     AddClass('Vectors', TVector3D, 'TVector3D');
@@ -1689,8 +1855,6 @@ begin
     AddSet(TVector3D, 'Y', TVector3D_Write_Y, 0, [varEmpty]);
     AddGet(TVector3D, 'Z', TVector3D_Read_Z, 0, [varEmpty], varEmpty);
     AddSet(TVector3D, 'Z', TVector3D_Write_Z, 0, [varEmpty]);
-=======
->>>>>>> dev
 
     { TStrings }
     AddGet(TStrings, 'Delimiter', TStrings_Read_Delimiter, 0, [varEmpty], varEmpty);
@@ -1904,7 +2068,6 @@ begin
     //AddEvent('RegularExpressionsCore', TPerlRegEx, 'TPerlRegExReplaceEvent');
     //AddHandler('RegularExpressionsCore', 'TNotifyEvent', TJvInterpreterClassesEvent, @TJvInterpreterClassesEvent.NotifyEvent);
     //AddHandler('RegularExpressionsCore', 'TPerlRegExReplaceEvent', TJvInterpreterPerlRegExEvents, @TJvInterpreterPerlRegExEvents.OnReplace);
-    
 
     { JsonDataObjects }
     AddConst('JsonDataObjects', 'jdtNone', Ord(TJsonDataType.jdtNone));

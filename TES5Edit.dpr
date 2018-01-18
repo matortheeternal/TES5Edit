@@ -43,17 +43,17 @@ uses
   wbSort in 'wbSort.pas',
   wbLOD in 'wbLOD.pas',
   wbLocalization in 'wbLocalization.pas',
-  frmViewMain in 'frmViewMain.pas',
-  FilterOptionsFrm in 'FilterOptionsFrm.pas',
-  FileSelectFrm in 'FileSelectFrm.pas',
-  ViewElementsFrm in 'ViewElementsFrm.pas',
-  EditWarningFrm in 'EditWarningFrm.pas',
-  frmWaitForm in 'frmWaitForm.pas',
-  frmLocalizationForm in 'frmLocalizationForm.pas',
-  frmLocalizePluginForm in 'frmLocalizePluginForm.pas',
-  frmScriptForm in 'frmScriptForm.pas',
-  frmOptionsForm in 'frmOptionsForm.pas',
-  frmLogAnalyzerForm in 'frmLogAnalyzerForm.pas',
+  frmViewMain in 'frmViewMain.pas' {frmMain},
+  FilterOptionsFrm in 'FilterOptionsFrm.pas' {frmFilterOptions},
+  FileSelectFrm in 'FileSelectFrm.pas' {frmFileSelect},
+  ViewElementsFrm in 'ViewElementsFrm.pas' {frmViewElements},
+  EditWarningFrm in 'EditWarningFrm.pas' {frmEditWarning},
+  frmWaitForm in 'frmWaitForm.pas' {frmWait},
+  frmLocalizationForm in 'frmLocalizationForm.pas' {frmLocalization},
+  frmLocalizePluginForm in 'frmLocalizePluginForm.pas' {frmLocalizePlugin},
+  frmScriptForm in 'frmScriptForm.pas' {frmScript},
+  frmOptionsForm in 'frmOptionsForm.pas' {frmOptions},
+  frmLogAnalyzerForm in 'frmLogAnalyzerForm.pas' {frmLogAnalyzer},
   frmLODGenForm in 'frmLODGenForm.pas',
   frmTipForm in 'frmTipForm.pas',
   wbDefinitionsFNV in 'wbDefinitionsFNV.pas',
@@ -68,15 +68,14 @@ uses
   wbDefinitionsTES5 in 'wbDefinitionsTES5.pas',
   wbDefinitionsTES5Saves in 'wbDefinitionsTES5Saves.pas',
   wbSaveInterface in 'wbSaveInterface.pas',
-  Zlibex in 'Zlibex.pas'
-  Vectors in 'Vectors.pas';
   wbDataFormat in 'wbDataFormat.pas',
   wbDataFormatMisc in 'wbDataFormatMisc.pas',
   wbDataFormatMaterial in 'wbDataFormatMaterial.pas',
   wbDataFormatNif in 'wbDataFormatNif.pas',
   wbDataFormatNifTypes in 'wbDataFormatNifTypes.pas',
   wbNifMath in 'wbNifMath.pas',
-  wbHalfFloat in 'wbHalfFloat.pas';
+  wbHalfFloat in 'wbHalfFloat.pas',
+  Vectors in 'Vectors.pas';
 
 {$R *.res}
 {$MAXSTACKSIZE 2097152}
